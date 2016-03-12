@@ -1,0 +1,20 @@
+{
+  "name": "r4dl",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node . ",
+    "test": "xo && ava"
+  },
+  "author": "donleche",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^1.1.1",
+    "nightmare": "^2.2.0"
+  },
+  "devDependencies": {
+    "ava": "^0.13.0",
+    "xo": "^0.13.0"
+  }
+}
