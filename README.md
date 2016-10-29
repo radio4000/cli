@@ -1,5 +1,7 @@
 # r4dl
 
+Downloads a radio4000 radio.
+
 ## How to use
 
 You need to have node and homebrew installed. Then run:
