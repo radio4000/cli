@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node . ",
     "test": "xo && ava",
-    "prettier": "prettier --write --use-tabs --no-semi --single-quote 'index.js' 'src/**/*.js'"
+    "prettier": "prettier --write --use-tabs --no-semi --single-quote --no-bracket-spacing '{index,test}.js' 'src/**/*.js'"
   },
   "author": "donleche",
   "license": "MIT",
@@ -24,5 +24,8 @@
   },
   "bin": {
     "r4dl": "./index.js"
+  },
+  "xo": {
+    "semicolon": false
   }
 }

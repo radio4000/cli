@@ -8,7 +8,7 @@ const Nightmare = require('nightmare')
 
 const findTracks = url => {
 	return (
-		new Nightmare({ show: false })
+		new Nightmare({show: false})
 			.goto(url + '/tracks')
 			.wait('.List')
 			// Waiting for .Track is not reliable. Neither is this. But yea.
