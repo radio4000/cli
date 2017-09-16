@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node . ",
     "test": "xo && ava",
-    "format": "prettier --write --use-tabs --single-quote --no-bracket-spacing"
+    "prettier": "prettier --write --use-tabs --no-semi --single-quote 'index.js' 'src/**/*.js'"
   },
   "author": "donleche",
   "license": "MIT",
