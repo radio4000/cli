@@ -1,16 +1,10 @@
 #!/usr/bin/env node
 
-'use strict'
-
 const args = require('args')
-const prompts = require('prompts')
 const listenToYoutube = require('listen-to-youtube-cli')
 const Speaker = require('speaker')
-const {
-	findChannels,
-	findChannelBySlug,
-	findTracksByChannel
-} = require('radio4000-sdk')
+const {findChannelBySlug, findTracksByChannel} = require('radio4000-sdk')
+const autocompleteChannels = require('./lib/autocomplete-channels')
 
 args
 	.option('search', 'search for a radio')
@@ -28,18 +22,7 @@ let slug = args.sub[0]
 
 const main = async function() {
 	if (flags.search) {
-		const channels = await findChannels()
-		const question = {
-			type: 'autocomplete',
-			name: 'slug',
-			message: 'Search for a radio to play',
-			choices: channels.map(c => ({
-				title: c.title,
-				value: c.slug
-			}))
-		}
-		const answer = await prompts(question)
-		slug = answer.slug
+		slug = await autocompleteChannels()
 	}
 
 	if (!slug) args.showHelp()
@@ -56,4 +39,3 @@ const main = async function() {
 }
 
 main()
-

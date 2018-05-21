@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node . ",
     "test": "xo && ava",
-    "prettier": "prettier --write --use-tabs --no-semi --single-quote --no-bracket-spacing '{index,test}.js' 'src/**/*.js'"
+    "prettier": "prettier --write --use-tabs --no-semi --single-quote --no-bracket-spacing '{index,test}.js' 'lib/**/*.js'"
   },
   "author": "internet4000",
   "license": "GPL3",
