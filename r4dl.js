@@ -5,8 +5,9 @@ const commandExists = require('command-exists')
 const ora = require('ora')
 const chalk = require('chalk')
 const urlRegex = require('url-regex')
-const findTracks = require('./src/find-tracks')
-const downloadTracks = require('./src/download-tracks')
+const findTracks = require('./lib/find-tracks')
+const downloadTracks = require('./lib/download-tracks')
+
 const log = console.log
 
 const init = () => {

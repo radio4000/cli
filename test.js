@@ -1,7 +1,7 @@
 import test from 'ava'
-const findTracks = require('./src/find-tracks')
-const downloadTracks = require('./src/download-tracks')
-const r4dl = require('./index')
+import findTracks from './lib/find-tracks'
+import downloadTracks from './lib/download-tracks'
+import r4dl from './r4dl'
 
 test('all functions are there', t => {
 	t.plan(3)
