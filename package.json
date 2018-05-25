@@ -12,15 +12,15 @@
   "license": "GPL-3.0-or-later",
   "dependencies": {
     "args": "^4.0.0",
-    "chalk": "^1.1.1",
-    "command-exists": "^1.0.2",
+    "chalk": "^2.4.1",
+    "command-exists": "^1.2.6",
     "listen-to-youtube-cli": "^1.0.0",
     "nightmare": "^2.2.0",
-    "ora": "^0.2.0",
+    "ora": "^2.1.0",
     "prompts": "^0.1.8",
     "radio4000-sdk": "^0.0.5",
     "speaker": "^0.4.1",
-    "url-regex": "^3.2.0"
+    "url-regex": "^4.1.1"
   },
   "devDependencies": {
     "ava": "^0.25.0",

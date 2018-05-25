@@ -34,9 +34,7 @@ const init = () => {
 	}
 
 	const slug = url.split('.com/')[1]
-	const spinner = ora(`Finding tracks from ${url}.`)
-
-	spinner.start()
+	const spinner = ora(`Finding tracks from ${url}.`).start()
 
 	setTimeout(() => {
 		spinner.text = 'This can take quite a while (~1-20 minutes)'
