@@ -16,8 +16,7 @@
     "listen-to-youtube-cli": "^1.0.0",
     "prompts": "^0.1.8",
     "radio4000-sdk": "^0.0.5",
-    "speaker": "^0.4.1",
-    "url-regex": "^4.1.1"
+    "speaker": "^0.4.1"
   },
   "devDependencies": {
     "ava": "^0.25.0",
