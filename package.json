@@ -1,31 +1,38 @@
 {
-  "name": "r4dl",
+  "name": "r4",
   "version": "0.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "CLI for Radio4000",
+  "main": "r4.js",
   "scripts": {
     "start": "node . ",
     "test": "xo && ava",
-    "prettier": "prettier --write --use-tabs --no-semi --single-quote --no-bracket-spacing '{index,test}.js' 'src/**/*.js'"
+    "prettier": "prettier --write '*.js' 'lib/**/*.js'"
   },
-  "author": "donleche",
-  "license": "MIT",
+  "author": "internet4000",
+  "license": "GPL-3.0-or-later",
   "dependencies": {
-    "chalk": "^1.1.1",
-    "command-exists": "^1.0.2",
-    "nightmare": "^2.2.0",
-    "ora": "^0.2.0",
-    "url-regex": "^3.2.0"
+    "args": "^4.0.0",
+    "command-exists": "^1.2.6",
+    "listen-to-youtube-cli": "^1.0.0",
+    "prompts": "^0.1.8",
+    "radio4000-sdk": "^0.0.5",
+    "speaker": "^0.4.1"
   },
   "devDependencies": {
-    "ava": "^0.15.2",
-    "prettier": "^1.3.1",
-    "xo": "^0.15.1"
+    "ava": "^0.25.0",
+    "prettier": "^1.12.1",
+    "xo": "^0.21.1"
   },
   "bin": {
-    "r4dl": "./index.js"
+    "r4": "./r4.js",
+    "r4-download": "./r4-download.js",
+    "r4-listen": "./r4-listen.js"
   },
   "xo": {
-    "semicolon": false
+    "prettier": true,
+    "semicolon": false,
+    "rules": {
+      "prefer-destructuring": 0
+    }
   }
 }
