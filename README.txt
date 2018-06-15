@@ -14,19 +14,18 @@ r4 -v, --version
 
 DESCRIPTION
 
-r4 is a program for interacting with Radio4000.123456
+r4 is a program for interacting with Radio4000.
 
 
 INSTALLATION
 
-For now, the the only way to use it is to clone this repository and link it:
+For now, the the only way to use it is to clone this repository and link it. Make sure `node` and `youtube-dl` are installed. See https://github.com/rg3/youtube-dl/#installation.
 
-You will need `node` and [youtube-dl](https://github.com/rg3/youtube-dl/#installation) installed.
+1. git clone git@github.com:internet4000/r4.git
+2. cd r4
+3. npm link
 
-1. `git clone git@github.com:internet4000/r4.git`
-2. `cd r4`
-3. `yarn link`
-4. Now you can run `r4` anywhere on your system
+Now you can run `r4` anywhere on your system.
 
 
 DEVELOPMENT
