@@ -23,8 +23,8 @@ For now, the the only way to use it is to clone this repository and link it:
 
 You will need `node` and [youtube-dl](https://github.com/rg3/youtube-dl/#installation) installed.
 
-1. `git clone git@gitlab.com:internet4000/r4dl.git`
-2. `cd r4dl`
+1. `git clone git@gitlab.com:internet4000/r4.git`
+2. `cd r4`
 3. `yarn link`
 4. Now you can run `r4` anywhere on your system
 
