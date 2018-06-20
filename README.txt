@@ -19,11 +19,10 @@ r4 is a program for interacting with Radio4000.
 
 INSTALLATION
 
-First, make sure `node` and `youtube-dl` are installed. See https://github.com/rg3/youtube-dl/#installation.
+npm install --global r4
 
-- `npm install --global r4` or `yarn global add r4`
-
-Now you can run `r4` anywhere on your system.
+For downloads to work, make sure youtube-dl is installed on your system:
+https://github.com/rg3/youtube-dl/#installation.
 
 
 DEVELOPMENT
