@@ -7,7 +7,6 @@ const downloadTracks = require('./lib/download-tracks')
 const autocompleteChannels = require('./lib/autocomplete-channels')
 
 args
-	.option('destination', 'the path of the folder to download')
 	.option('search', 'search for a radio')
 	.example('r4 download 200ok', 'Download the channel with the slug "200ok"')
 
