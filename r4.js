@@ -16,7 +16,6 @@ args
 	.example('r4 <command> help', `Display help for a specific command`)
 
 args.parse(process.argv, {
-	version: false,
 	// Use default terminal color.
 	mainColor: ['reset']
 })
