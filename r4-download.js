@@ -19,6 +19,9 @@ const flags = args.parse(process.argv, {
 
 let slug = args.sub[0]
 
+// If the "dl" alias is used, slug is second argument.
+if (slug === 'dl') slug = args.sub[1]
+
 const main = async function() {
 	try {
 		await commandExists('youtube-dl')

@@ -3,7 +3,7 @@
 const args = require('args')
 
 args
-	.command('download', 'Download a channel')
+	.command(['download', 'dl'], 'Download a channel')
 	.command('play', 'Play a channel')
 	.example(
 		'r4 download 200ok',
