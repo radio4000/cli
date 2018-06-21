@@ -6,7 +6,7 @@ r4 - the Radio4000 CLI
 USAGE
 
 r4 download <channel-slug>
-r4 listen <channel-slug>
+r4 play <channel-slug>
 r4 <command> help
 r4 -h, --help
 r4 -v, --version

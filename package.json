@@ -26,7 +26,7 @@
   "bin": {
     "r4": "./r4.js",
     "r4-download": "./r4-download.js",
-    "r4-listen": "./r4-listen.js"
+    "r4-play": "./r4-play.js"
   },
   "xo": {
     "prettier": true,
