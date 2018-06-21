@@ -6,7 +6,7 @@ r4 - the Radio4000 CLI
 USAGE
 
 r4 download <channel-slug>
-r4 listen <channel-slug>
+r4 play <channel-slug>
 r4 <command> help
 r4 -h, --help
 r4 -v, --version
@@ -19,21 +19,22 @@ r4 is a program for interacting with Radio4000.
 
 INSTALLATION
 
-For now, the the only way to use it is to clone this repository and link it. Make sure `node` and `youtube-dl` are installed. See https://github.com/rg3/youtube-dl/#installation.
+npm install --global r4
 
-1. git clone git@github.com:internet4000/r4.git
-2. cd r4
-3. npm link
-
-Now you can run `r4` anywhere on your system.
+For downloads to work, make sure youtube-dl is installed on your system:
+https://github.com/rg3/youtube-dl/#installation.
 
 
 DEVELOPMENT
 
-Lint scripts and run tests with `yarn test`.
-To fix linting, try `xo --fix`.
+1. git clone git@github.com:internet4000/r4.git
+2. cd r4
+3. yarn link
 
-If you you are changing the path or adding a new binary, remember to run `yarn unlink` and `yarn link` in the project.
+Linking makes `r4` use your local copy. If you you are changing the path or adding a new binary, remember to run `yarn unlink` and `yarn link` in the project.
+
+Lint scripts and run tests with `yarn test`.
+To format scripts, run `yarn prettier`.
 
 
 FURTHER NOTES
