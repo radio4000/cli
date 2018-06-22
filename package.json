@@ -1,6 +1,6 @@
 {
   "name": "r4",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "CLI for Radio4000",
   "main": "r4.js",
   "scripts": {
