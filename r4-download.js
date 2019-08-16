@@ -38,15 +38,15 @@ const main = async function() {
 
 	if (!slug) args.showHelp()
 
-	console.log(`Downloading channel: ${slug}…`)
+	console.log(`Starting downloading channel: ${slug}`)
 
 	try {
 		const backup = await createBackup(slug)
 		const urls = backup.tracks.map(
-			track => `http://www.youtube.com/watch?v=${track.ytid}`
+			track => `${track.url}`
 		)
 		await downloadTracks(urls, slug)
-		console.log('DONE')
+		console.log(`Download complete for channel: ${slug}`)
 	} catch (err) {
 		console.warn(err)
 	}
