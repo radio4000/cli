@@ -42,9 +42,7 @@ const main = async function() {
 
 	try {
 		const backup = await createBackup(slug)
-		const urls = backup.tracks.map(
-			track => `${track.url}`
-		)
+		const urls = backup.tracks.map(track => track.url)
 		await downloadTracks(urls, slug)
 		console.log(`Download complete for channel: ${slug}`)
 	} catch (err) {
