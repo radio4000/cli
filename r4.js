@@ -4,7 +4,8 @@ const args = require('args')
 
 args
 	.command(['download', 'dl'], 'Download a channel')
-	.command(['init'], 'Init the current folder as Radio4000 folder, with a default channel')
+	.command(['init'], 'Init the current folder as r4 folder, with a default channel')
+	.command(['deinit'], 'De-init the current folder as r4 folder')
 	.command(['clean'], 'Clean a channel folder')
 	.example(
 		'r4 download a-channel',

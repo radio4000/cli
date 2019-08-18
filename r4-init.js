@@ -28,10 +28,10 @@ const main = async function() {
 	slug = slug || ''
 
 	if (fs.existsSync(r4ConfigPath)) {
-		console.log('This folder is already R4 folder; see', r4ConfigPath)
 		if (forceInit) {
 			debugOutput && console.log('Forcing reinit')
 		} else {
+			console.log('This folder is already R4 folder; see', r4ConfigPath)
 			return
 		}
 	}

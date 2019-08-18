@@ -5,6 +5,7 @@ const fs = require('fs-extra')
 
 args
 	.option('debug', 'More outputs to the console')
+	.option('force', 'Force init with new data')
 	.example('r4 deinit', 'De-initialized the current folder as R4 folder1')
 
 const flags = args.parse(process.argv, {
@@ -15,14 +16,12 @@ const flags = args.parse(process.argv, {
 
 let slug = args.sub[0] || ''
 
-const {
-	debug: debugOutput,
-	force: forceInit
-} = flags
-
 const r4ConfigPath = './r4.json'
 
 const main = async function() {
+	const {
+		debug: debugOutput
+	} = flags
 	slug = slug || ''
 
 	if (!fs.existsSync(r4ConfigPath)) {
