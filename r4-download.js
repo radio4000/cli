@@ -80,6 +80,7 @@ const main = async function() {
 	// first get the backup
 	let backup
 	try {
+		debugOutput && console.log('Fetching data @ api.radio4000.com for')
 		backup = await createBackup(slug)
 	} catch (error) {
 		console.warn(error)
