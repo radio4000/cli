@@ -65,18 +65,23 @@ const showSortedChannelTags = (channelData) => {
 const generateFolderStructure = async ({tracks, slug: channelSlug}) => {
 	if (tracks && tracks.length < 0) return
 
+	// remove the tags folder if it already exists,
+	// to start clean
 	const tagsPath = `./${channelSlug}/tags`
 	if (fs.existsSync(tagsPath)) {
 		try {
 			await fs.remove(tagsPath)
-			console.log('Removed old Tag folder')
+			console.log(`Removed old "./${channelSlug}/tags" folder`)
 		} catch (error) {
 			console.error('Error de-initing r4 folder', r4ConfigPath, error)
 			return
 		}
 	}
 
-	let tracksWithTags = []
+	// for each track, generate a hard link,
+	// to a folder /tags/tag/:track-name, for each of its tags,
+	// if the track exists locally
+	let exisitingTracksWithTags = []
 	await asyncForEach(tracks, async (track) => {
 		const tags = tagsFromString(track.body)
 		if (!tags || !tags.length > 0) return
@@ -85,22 +90,25 @@ const generateFolderStructure = async ({tracks, slug: channelSlug}) => {
 		const trackExists = await fs.existsSync(trackPath)
 
 		if (!trackExists) return
-		tracksWithTags.push(track)
+		exisitingTracksWithTags.push(track)
 
-		const writeTrackAtTag = tags.map(tag => {
+		const writeTracksAtTagPromises = tags.map(tag => {
 			const trackLinkTagPath = `./${channelSlug}/tags/${tag}/${track.title}.m4a`
 			return fs.ensureLink(trackPath, trackLinkTagPath)
 		})
 
 		try {
-			await Promise.all(writeTrackAtTag)
+			await Promise.all(writeTracksAtTagPromises)
 		} catch (error) {
-			console.error('Error writing track hard link at tag', error)
-			return
+			// if file already exists
+			if (error.errno != -17) {
+				console.error('Error writing track hard link at tag', error)
+				return
+			}
 		}
 
 	})
-	console.log(`Hard linked ${tracksWithTags.length} tracks to the "./${channelSlug}/tags" folder`)
+	console.log(`Hard linked ${exisitingTracksWithTags.length} existing tracks with tags, to the "./${channelSlug}/tags" folder`)
 }
 
 const main = async function() {
