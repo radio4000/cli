@@ -7,6 +7,7 @@ args
 	.command(['init'], 'Init the current folder as r4 folder, with a default channel')
 	.command(['deinit'], 'De-init the current folder as r4 folder')
 	.command(['clean'], 'Clean a channel folder')
+	.command(['copy'], 'Copy a channel to a destination using rsync')
 	.example(
 		'r4 download a-channel',
 		`Download the channel at https://radio4000.com/a-channel`
