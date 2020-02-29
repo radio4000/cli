@@ -18,7 +18,7 @@ const flags = args.parse(process.argv, {
 let slug = args.sub[0]
 let destinationPath = args.sub[1]
 
-if (!slug || !destinationPath) return
+if (!slug || !destinationPath) return args.showHelp()
 
 // make sure the slug is a local folder
 slug = path.basename(slug)
