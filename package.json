@@ -40,7 +40,8 @@
     "r4-clean": "./r4-clean.js",
     "r4-init": "./r4-init.js",
     "r4-deinit": "./r4-deinit.js",
-    "r4-copy": "./r4-copy.js"
+    "r4-copy": "./r4-copy.js",
+    "r4-tags": "./r4-tags.js"
   },
   "xo": {
     "prettier": true,

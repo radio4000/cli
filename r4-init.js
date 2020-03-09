@@ -7,7 +7,7 @@ const os = require('os')
 args
 	.option('debug', 'More outputs to the console')
 	.option('force', 'Force init with new data')
-	.example('r4 clean a-channel', 'Download the channel with the slug "a-channel"')
+	.example('r4 init a-channel', 'Init the channel "a-channel", as your r4 channel, at path "./r4.json"')
 
 const flags = args.parse(process.argv, {
 	version: false,
