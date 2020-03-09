@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const args = require('args')
-var fs = require('fs-extra')
+const fs = require('fs-extra')
 const {createBackup} = require('radio4000-sdk')
 const commandExists = require('command-exists')
 const downloadTracks = require('./lib/download-tracks')
