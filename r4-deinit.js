@@ -19,21 +19,19 @@ let slug = args.sub[0] || ''
 const r4ConfigPath = './r4.json'
 
 const main = async function() {
-	const {
-		debug: debugOutput
-	} = flags
+	const {debug} = flags
 	slug = slug || ''
 
 	if (!fs.existsSync(r4ConfigPath)) {
-		debugOutput && console.log('Not a r4 folder')
+		debug && console.log('Not a r4 folder')
 		return
 	}
 
-	debugOutput && console.log('Found r4 folder; existing', r4ConfigPath)
+	debug && console.log('Found r4 folder; existing', r4ConfigPath)
 
 	try {
 		fs.unlink(r4ConfigPath)
-		debugOutput && console.log('Sucess deinit')
+		debug && console.log('Sucess deinit')
 	} catch (error) {
 		console.error('Error de-initing r4 folder', r4ConfigPath, error)
 	}
