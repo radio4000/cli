@@ -18,7 +18,7 @@ const flags = args.parse(process.argv, {
 let slug = args.sub[0] || ''
 
 const {
-	debug: debugOutput,
+	debug,
 	force: forceInit
 } = flags
 
@@ -29,7 +29,7 @@ const main = async function() {
 
 	if (fs.existsSync(r4ConfigPath)) {
 		if (forceInit) {
-			debugOutput && console.log('Forcing reinit')
+			debug && console.log('Forcing reinit')
 		} else {
 			console.log('This folder is already R4 folder; see', r4ConfigPath)
 			return
@@ -41,8 +41,8 @@ const main = async function() {
 	}
 
 	try {
-		fs.writeFile(r4ConfigPath, JSON.stringify(channelData) + os.EOL)
-		debugOutput && console.log('Created', r4ConfigPath)
+		await fs.writeFile(r4ConfigPath, JSON.stringify(channelData) + os.EOL)
+		debug && console.log('Created', r4ConfigPath)
 	} catch (error) {
 		console.error('Error creating file', r4ConfigPath, error)
 	}

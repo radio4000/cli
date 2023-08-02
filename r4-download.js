@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 const args = require('args')
-var fs = require('fs-extra')
-const {createBackup} = require('radio4000-sdk')
+const fs = require('fs-extra')
 const commandExists = require('command-exists')
+const {createBackup} = require('radio4000-sdk')
 const downloadTracks = require('./lib/download-tracks')
 const autocompleteChannels = require('./lib/autocomplete-channels')
 
@@ -12,6 +12,7 @@ args
 	.option('forceMedia', 'Force redownload of all media, even those marked as mediaNotavailable on a r4 track')
 	.option('force', 'Force redownload and overwrite of all media for this channel')
 	.option('debug', 'Output to the console more information to help debug this software')
+	.option('dryrun', 'Do not download anything, show what would happen')
 	.example('r4 download 200ok', 'Download the channel with the slug "200ok". Overwriting existing data')
 	.example('r4 download --search', 'Search for a radio to download')
 
@@ -33,10 +34,10 @@ const saveChannelData = async (channelData, backupPath) => {
 const main = async function() {
 	// Get command line flags
 	const {
-		debug: debugOutput,
+		debug,
+		dryrun,
 		search: showSearch,
 		force: forceDownload,
-		forceMedia: forceMediaAvailableCheck,
 	} = flags
 
 	try {
@@ -75,12 +76,11 @@ const main = async function() {
 
 	if (!slug) args.showHelp()
 
-	console.log(`Starting download for channel: ${slug}`)
+	console.log(`Starting download for @${slug}`)
 
 	// first get the backup
 	let backup
 	try {
-		debugOutput && console.log('Fetching data @ api.radio4000.com')
 		backup = await createBackup(slug)
 	} catch (error) {
 		console.warn(error)
@@ -97,18 +97,14 @@ const main = async function() {
 	}
 
 	// Save the channels media to files
-	const downloadOptions = {
-		forceMediaAvailableCheck,
-		forceDownload,
-		debugOutput
-	}
 	try {
-		await downloadTracks(backup.tracks.reverse(), slug, downloadOptions)
+		const {failures, toDownload} = await downloadTracks(backup.tracks.reverse(), slug, {forceDownload, debug, dryrun})
 		console.log(`Finished download for channel: ${slug}`)
+		console.log(`${failures.length}/${toDownload.length} failed to download. See ./${slug}/${slug}-logs.json for details.`)
+		await fs.writeFile(`./${slug}/${slug}-logs.json`, JSON.stringify(failures, null, 1))
 	} catch (error) {
 		console.warn(error)
 	}
-
 }
 
 main()

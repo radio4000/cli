@@ -15,7 +15,7 @@ args
 	)
 	.example('r4 init a-channel', `Init the current folder as a Radio4000 folder with the channel "a-channel" as default`)
 	.example('r4 clean a-channel', `Clean all unecessary files in the ./a-channel channel folder`)
-	.example('r4 <command> help', `Display help for a specific command`)
+	.example('r4 <command>', `Display help for a specific command`)
 
 args.parse(process.argv, {
 	// Use default terminal color.

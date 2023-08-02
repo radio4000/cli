@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "ava": "^3.0.0",
+    "eslint": "^8.46.0",
     "prettier": "^1.19.1",
     "xo": "^0.25.3"
   },
@@ -49,5 +50,9 @@
     "rules": {
       "prefer-destructuring": 0
     }
+  },
+  "prettier": {
+    "singleQuote": true,
+    "semi": false
   }
 }

@@ -16,9 +16,7 @@ const flags = args.parse(process.argv, {
 
 let slug = args.sub[0] || ''
 
-const {
-	debug: debugOutput
-} = flags
+const {debug} = flags
 
 const cleanPath = async (folderPath) => {
 	// Remove '' empty string for all files without extension
@@ -36,13 +34,13 @@ const cleanPath = async (folderPath) => {
 		filesToClean.forEach(filePath =>{
 			const pathToUnlink = folderPath + filePath
 			fs.unlink(pathToUnlink)
-			debugOutput && console.log('Cleaned', pathToUnlink)
+			debug && console.log('Cleaned', pathToUnlink)
 		})
 	} else {
-		debugOutput && console.log('0 files to clean')
+		debug && console.log('0 files to clean')
 	}
 
-	debugOutput && console.log(`${filesToClean.length} files cleaned`)
+	debug && console.log(`${filesToClean.length} files cleaned`)
 }
 
 const main = async function() {
@@ -56,10 +54,10 @@ const main = async function() {
 		return
 	}
 
-	debugOutput && console.log('Cleaning channel folder path', pathToClean)
+	debug && console.log('Cleaning channel folder path', pathToClean)
 
 	try {
-		cleanPath(pathToClean)
+		await cleanPath(pathToClean)
 	} catch (error) {
 		console.error('Error cleaning folder path', pathToClean)
 	}
