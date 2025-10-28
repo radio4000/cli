@@ -79,8 +79,12 @@ export function formatCLIError(error) {
 		}
 
 		// Show available options
-		const label = error.context.commandPath ? 'Available subcommands:' : 'Available commands:'
-		const commands = error.context.available.map(cmd => `  ${cmd.name}`).join('\n')
+		const label = error.context.commandPath
+			? 'Available subcommands:'
+			: 'Available commands:'
+		const commands = error.context.available
+			.map((cmd) => `  ${cmd.name}`)
+			.join('\n')
 		output += `${label}\n${commands}`
 
 		return output

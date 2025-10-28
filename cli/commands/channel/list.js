@@ -30,8 +30,5 @@ export default {
 		}
 	},
 
-	examples: [
-		'r4 channel list --limit 10',
-		'r4 channel list --limit 100 --sql'
-	]
+	examples: ['r4 channel list --limit 10', 'r4 channel list --limit 100 --sql']
 }

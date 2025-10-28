@@ -23,7 +23,7 @@ export const trackSchema = z.object({
 	slug: z.string(), // channel slug
 	title: z.string().min(1).max(500),
 	url: z.string().url(),
-	discogs_url: z.string().url(),
+	discogs_url: z.string().url().optional(),
 	created_at: z.string().optional(),
 	updated_at: z.string().optional(),
 	source: z.enum(['v1', 'v2']).default('v2')
