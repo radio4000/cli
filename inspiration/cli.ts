@@ -32,7 +32,8 @@ const handleSourceError = (error, context, code = 3) => {
 
 // Output formatters
 /** @param {{slug: string; name?: string}} channel */
-const formatChannel = (channel) => `${channel.slug}\t${channel.name || 'Untitled'}`
+const formatChannel = (channel) =>
+	`${channel.slug}\t${channel.name || 'Untitled'}`
 /** @param {{title?: string; url: string}} track */
 const formatTrack = (track) => `${track.title || 'Untitled'}\t${track.url}`
 
@@ -87,8 +88,14 @@ Usage:
 	.example('$0 pull ko002', 'Smart sync channel+tracks (local first)')
 	.example('$0 search ko002', 'Search everything for "ko002"')
 	.example('$0 tags tobha --limit 10', 'Show top 10 hashtags for @tobha')
-	.example('$0 tracks list ko002 --source r4 --limit 5', 'List 5 tracks from remote')
-	.example('$0 channels list --source local --json', 'Get local channels as JSON')
+	.example(
+		'$0 tracks list ko002 --source r4 --limit 5',
+		'List 5 tracks from remote'
+	)
+	.example(
+		'$0 channels list --source local --json',
+		'Get local channels as JSON'
+	)
 	.example('$0 channels pull ko002', 'Force pull channel from remote')
 	.recommendCommands()
 	.strictCommands()
@@ -99,7 +106,9 @@ Usage:
 		if (msg) {
 			console.error(`Error: ${msg}`)
 			if (msg.includes('source')) {
-				console.error('Try: --source local, --source r4, or --source v1. Data is only local after pulling.')
+				console.error(
+					'Try: --source local, --source r4, or --source v1. Data is only local after pulling.'
+				)
 			}
 			process.exit(1)
 		}
@@ -123,16 +132,26 @@ cli.command('channels <command>', 'Manage channels', (yargs) => {
 					.positional('slug', {describe: 'Channel slug', type: 'string'})
 					.option('source', {
 						choices: ['local', 'r4', 'v1'] as const,
-						describe: 'Data source: local (your db), r4 (radio4000.com), v1 (legacy)',
+						describe:
+							'Data source: local (your db), r4 (radio4000.com), v1 (legacy)',
 						demandOption: true
 					})
-					.option('limit', {type: 'number', describe: 'Limit number of results'})
-					.option('json', {type: 'boolean', default: false, describe: 'Output as JSON'})
+					.option('limit', {
+						type: 'number',
+						describe: 'Limit number of results'
+					})
+					.option('json', {
+						type: 'boolean',
+						default: false,
+						describe: 'Output as JSON'
+					})
 					// .demandOption('source', 'COME ONE')
 					.group(['source', 'limit', 'json'], 'Options:'),
 			async (argv) => {
 				try {
-					const opts = argv.slug ? {slug: argv.slug, limit: argv.limit} : {limit: argv.limit}
+					const opts = argv.slug
+						? {slug: argv.slug, limit: argv.limit}
+						: {limit: argv.limit}
 					const results = await sources.channels[argv.source](opts)
 					outputResults(results, formatChannel, argv.json, argv.limit)
 				} catch (error) {
@@ -144,21 +163,30 @@ cli.command('channels <command>', 'Manage channels', (yargs) => {
 			'pull [slug]',
 			'Force pull channels from remote (bypasses local)',
 			(yargs) =>
-				yargs.positional('slug', {describe: 'Specific channel slug to pull', type: 'string'}).option('dry-run', {
-					type: 'boolean',
-					default: false,
-					describe: 'Show what would happen without doing it'
-				}),
+				yargs
+					.positional('slug', {
+						describe: 'Specific channel slug to pull',
+						type: 'string'
+					})
+					.option('dry-run', {
+						type: 'boolean',
+						default: false,
+						describe: 'Show what would happen without doing it'
+					}),
 			async (argv) => {
 				try {
 					if (argv['dry-run']) {
-						console.log(`Would pull channel${argv.slug ? ` '${argv.slug}'` : 's'}`)
+						console.log(
+							`Would pull channel${argv.slug ? ` '${argv.slug}'` : 's'}`
+						)
 						return
 					}
 					const opts = argv.slug ? {slug: argv.slug} : {}
 					const result = await r5.channels.pull(opts)
 					if (Array.isArray(result)) {
-						console.log(`Pulled ${result.length} channel${result.length === 1 ? '' : 's'}`)
+						console.log(
+							`Pulled ${result.length} channel${result.length === 1 ? '' : 's'}`
+						)
 					} else if (result && typeof result === 'object' && 'slug' in result) {
 						console.log(`Pulled channel: ${(result as {slug: string}).slug}`)
 					} else {
@@ -183,15 +211,25 @@ cli.command('tracks <command>', 'Manage tracks', (yargs) => {
 					.positional('slug', {describe: 'Channel slug', type: 'string'})
 					.option('source', {
 						choices: ['local', 'r4', 'v1'] as const,
-						describe: 'Data source: local (your db), r4 (radio4000.com), v1 (legacy)',
+						describe:
+							'Data source: local (your db), r4 (radio4000.com), v1 (legacy)',
 						demandOption: true
 					})
-					.option('limit', {type: 'number', describe: 'Limit number of results'})
-					.option('json', {type: 'boolean', default: false, describe: 'Output as JSON'})
+					.option('limit', {
+						type: 'number',
+						describe: 'Limit number of results'
+					})
+					.option('json', {
+						type: 'boolean',
+						default: false,
+						describe: 'Output as JSON'
+					})
 					.group(['source', 'limit', 'json'], 'Options:'),
 			async (argv) => {
 				try {
-					const opts = argv.slug ? {slug: argv.slug, limit: argv.limit} : {limit: argv.limit}
+					const opts = argv.slug
+						? {slug: argv.slug, limit: argv.limit}
+						: {limit: argv.limit}
 					const results = await sources.tracks[argv.source](opts)
 					outputResults(results, formatTrack, argv.json, argv.limit)
 				} catch (error) {
@@ -203,11 +241,17 @@ cli.command('tracks <command>', 'Manage tracks', (yargs) => {
 			'pull <slug>',
 			'Force pull tracks from remote (bypasses local)',
 			(yargs) =>
-				yargs.positional('slug', {describe: 'Channel slug', type: 'string', demandOption: true}).option('dry-run', {
-					type: 'boolean',
-					default: false,
-					describe: 'Show what would happen without doing it'
-				}),
+				yargs
+					.positional('slug', {
+						describe: 'Channel slug',
+						type: 'string',
+						demandOption: true
+					})
+					.option('dry-run', {
+						type: 'boolean',
+						default: false,
+						describe: 'Show what would happen without doing it'
+					}),
 			async (argv) => {
 				try {
 					if (argv['dry-run']) {
@@ -216,7 +260,9 @@ cli.command('tracks <command>', 'Manage tracks', (yargs) => {
 					}
 					const result = await r5.tracks.pull({slug: argv.slug})
 					if (Array.isArray(result)) {
-						console.log(`Pulled ${result.length} track${result.length === 1 ? '' : 's'}`)
+						console.log(
+							`Pulled ${result.length} track${result.length === 1 ? '' : 's'}`
+						)
 					} else {
 						console.log('Tracks pulled successfully')
 					}
@@ -233,11 +279,17 @@ cli.command(
 	'pull <slug>',
 	'Smart sync channel and tracks (local->r4->v1)',
 	(yargs) =>
-		yargs.positional('slug', {describe: 'Channel slug', type: 'string', demandOption: true}).option('dry-run', {
-			type: 'boolean',
-			default: false,
-			describe: 'Show what would happen without doing it'
-		}),
+		yargs
+			.positional('slug', {
+				describe: 'Channel slug',
+				type: 'string',
+				demandOption: true
+			})
+			.option('dry-run', {
+				type: 'boolean',
+				default: false,
+				describe: 'Show what would happen without doing it'
+			}),
 	async (argv) => {
 		try {
 			if (argv['dry-run']) {
@@ -258,7 +310,11 @@ cli.command(
 	'Search channels and tracks',
 	(yargs) =>
 		yargs
-			.positional('query', {describe: 'Search query', type: 'string', demandOption: true})
+			.positional('query', {
+				describe: 'Search query',
+				type: 'string',
+				demandOption: true
+			})
 			.option('channels', {
 				alias: 'c',
 				type: 'boolean',
@@ -339,7 +395,11 @@ cli.command(
 	'Show hashtag usage statistics for a channel',
 	(yargs) =>
 		yargs
-			.positional('slug', {describe: 'Channel slug', type: 'string', demandOption: true})
+			.positional('slug', {
+				describe: 'Channel slug',
+				type: 'string',
+				demandOption: true
+			})
 			.option('json', {
 				type: 'boolean',
 				default: false,
@@ -407,13 +467,18 @@ const dbCommands: Array<[string, string, () => Promise<void>]> = [
 
 cli.command('db <command>', 'Database operations', (yargs) => {
 	dbCommands.forEach(([cmd, desc, handler]) => {
-		;(yargs as import('yargs').Argv<Record<string, unknown>>).command(cmd, desc, {}, async () => {
-			try {
-				await handler()
-			} catch (error) {
-				handleError(error, 4)
+		;(yargs as import('yargs').Argv<Record<string, unknown>>).command(
+			cmd,
+			desc,
+			{},
+			async () => {
+				try {
+					await handler()
+				} catch (error) {
+					handleError(error, 4)
+				}
 			}
-		})
+		)
 	})
 	return yargs.demandCommand(1, 'You need to specify a db command')
 })
@@ -424,7 +489,11 @@ cli.command(
 	'Download tracks from a channel',
 	(yargs) =>
 		yargs
-			.positional('slug', {describe: 'Channel slug', type: 'string', demandOption: true})
+			.positional('slug', {
+				describe: 'Channel slug',
+				type: 'string',
+				demandOption: true
+			})
 			.option('output', {
 				alias: 'o',
 				describe: 'Output directory',
@@ -455,7 +524,10 @@ cli.command(
 				type: 'boolean',
 				default: false
 			})
-			.group(['output', 'concurrency', 'dry-run', 'retry-failed'], 'Download Options:')
+			.group(
+				['output', 'concurrency', 'dry-run', 'retry-failed'],
+				'Download Options:'
+			)
 			.group(['premium', 'po-token'], 'Premium Options:')
 			.check((argv) => {
 				if (argv.premium && !argv['po-token']) {
@@ -466,7 +538,9 @@ cli.command(
 	async (argv) => {
 		try {
 			if (argv.premium) {
-				console.log('Premium mode enabled - using YouTube Music with provided token')
+				console.log(
+					'Premium mode enabled - using YouTube Music with provided token'
+				)
 			}
 
 			await downloadChannel(argv.slug, argv.output, {

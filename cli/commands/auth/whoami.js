@@ -1,10 +1,10 @@
-import { readUser } from '../../lib/data.js';
+import {readUser} from '../../lib/data.js'
 
 export default {
 	description: 'Show current authenticated user',
 
 	handler: async () => {
-		const user = await readUser();
+		const user = await readUser()
 
 		if (!user) {
 			return {
@@ -13,7 +13,7 @@ export default {
 					message: 'Not authenticated. Run: r4 auth login'
 				},
 				format: 'json'
-			};
+			}
 		}
 
 		return {
@@ -22,10 +22,8 @@ export default {
 				user
 			},
 			format: 'json'
-		};
+		}
 	},
 
-	examples: [
-		'r4 auth whoami'
-	]
-};
+	examples: ['r4 auth whoami']
+}

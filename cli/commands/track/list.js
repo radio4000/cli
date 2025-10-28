@@ -1,4 +1,4 @@
-import { listTracks } from '../../lib/data.js';
+import {listTracks} from '../../lib/data.js'
 
 export default {
 	description: 'List all tracks, optionally filtered by channel(s)',
@@ -9,6 +9,10 @@ export default {
 			description: 'Channel slug to filter by (can be used multiple times)',
 			multiple: true
 		},
+		limit: {
+			type: 'number',
+			description: 'Limit number of results'
+		},
 		sql: {
 			type: 'boolean',
 			description: 'Output as SQL statements',
@@ -16,24 +20,30 @@ export default {
 		}
 	},
 
-	handler: async ({ flags }) => {
+	handler: async ({flags}) => {
 		const channelSlugs = flags.channel
-			? (Array.isArray(flags.channel) ? flags.channel : [flags.channel])
-			: undefined;
+			? Array.isArray(flags.channel)
+				? flags.channel
+				: [flags.channel]
+			: undefined
 
-		const tracks = await listTracks({ channelSlugs });
+		const tracks = await listTracks({
+			channelSlugs,
+			limit: flags.limit
+		})
 
 		return {
 			data: tracks,
 			format: flags.sql ? 'sql' : 'json',
-			formatOptions: flags.sql ? { table: 'tracks' } : undefined
-		};
+			formatOptions: flags.sql ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: [
 		'r4 track list',
 		'r4 track list --channel ko002',
+		'r4 track list --channel ko002 --limit 5',
 		'r4 track list --channel ko002 --channel oskar',
 		'r4 track list --sql'
 	]
-};
+}

@@ -1,17 +1,17 @@
-import { readFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { channelSchema, trackSchema } from './schema.js';
+import {readFile} from 'node:fs/promises'
+import {dirname, resolve} from 'node:path'
+import {fileURLToPath} from 'node:url'
+import {channelSchema, trackSchema} from './schema.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 // V1 data paths
-const V1_CHANNELS_PATH = resolve(__dirname, '../data/channels_v1.json');
-const V1_TRACKS_PATH = resolve(__dirname, '../data/tracks_v1.json');
+const V1_CHANNELS_PATH = resolve(__dirname, '../data/channels_v1.json')
+const V1_TRACKS_PATH = resolve(__dirname, '../data/tracks_v1.json')
 
 // Cache for v1 data
-let v1ChannelsCache = null;
-let v1TracksCache = null;
+let v1ChannelsCache = null
+let v1TracksCache = null
 
 /**
  * Load v1 channels from bundled JSON
@@ -19,13 +19,13 @@ let v1TracksCache = null;
  */
 async function loadV1Channels() {
 	if (v1ChannelsCache) {
-		return v1ChannelsCache;
+		return v1ChannelsCache
 	}
 
-	const content = await readFile(V1_CHANNELS_PATH, 'utf-8');
-	const channels = JSON.parse(content);
-	v1ChannelsCache = channels.map(ch => channelSchema.parse(ch));
-	return v1ChannelsCache;
+	const content = await readFile(V1_CHANNELS_PATH, 'utf-8')
+	const channels = JSON.parse(content)
+	v1ChannelsCache = channels.map((ch) => channelSchema.parse(ch))
+	return v1ChannelsCache
 }
 
 /**
@@ -34,13 +34,13 @@ async function loadV1Channels() {
  */
 async function loadV1Tracks() {
 	if (v1TracksCache) {
-		return v1TracksCache;
+		return v1TracksCache
 	}
 
-	const content = await readFile(V1_TRACKS_PATH, 'utf-8');
-	const tracks = JSON.parse(content);
-	v1TracksCache = tracks.map(tr => trackSchema.parse(tr));
-	return v1TracksCache;
+	const content = await readFile(V1_TRACKS_PATH, 'utf-8')
+	const tracks = JSON.parse(content)
+	v1TracksCache = tracks.map((tr) => trackSchema.parse(tr))
+	return v1TracksCache
 }
 
 /**
@@ -48,15 +48,16 @@ async function loadV1Tracks() {
  */
 export class DataSource {
 	constructor(config = {}) {
-		this.apiUrl = config.apiUrl || process.env.R4_API_URL || 'https://api.radio4000.com';
-		this.authToken = config.authToken || process.env.R4_AUTH_TOKEN;
+		this.apiUrl =
+			config.apiUrl || process.env.R4_API_URL || 'https://api.radio4000.com'
+		this.authToken = config.authToken || process.env.R4_AUTH_TOKEN
 	}
 
 	/**
 	 * Check if authenticated for write operations
 	 */
 	isAuthenticated() {
-		return !!this.authToken;
+		return !!this.authToken
 	}
 
 	/**
@@ -64,7 +65,7 @@ export class DataSource {
 	 */
 	requireAuth() {
 		if (!this.isAuthenticated()) {
-			throw new Error('Authentication required. Run: r4 auth login');
+			throw new Error('Authentication required. Run: r4 auth login')
 		}
 	}
 
@@ -72,24 +73,24 @@ export class DataSource {
 	 * Make API request to v2
 	 */
 	async apiRequest(endpoint, options = {}) {
-		const url = `${this.apiUrl}${endpoint}`;
+		const url = `${this.apiUrl}${endpoint}`
 		const headers = {
 			'Content-Type': 'application/json',
-			...(this.authToken ? { 'Authorization': `Bearer ${this.authToken}` } : {}),
+			...(this.authToken ? {Authorization: `Bearer ${this.authToken}`} : {}),
 			...options.headers
-		};
+		}
 
 		const response = await fetch(url, {
 			...options,
 			headers
-		});
+		})
 
 		if (!response.ok) {
-			const error = await response.text().catch(() => response.statusText);
-			throw new Error(`API request failed: ${response.status} ${error}`);
+			const error = await response.text().catch(() => response.statusText)
+			throw new Error(`API request failed: ${response.status} ${error}`)
 		}
 
-		return response.json();
+		return response.json()
 	}
 
 	// ===== CHANNEL OPERATIONS =====
@@ -100,12 +101,12 @@ export class DataSource {
 	async listChannels() {
 		try {
 			// Try v2 API first
-			const channels = await this.apiRequest('/channels');
-			return channels.map(ch => channelSchema.parse({ ...ch, source: 'v2' }));
+			const channels = await this.apiRequest('/channels')
+			return channels.map((ch) => channelSchema.parse({...ch, source: 'v2'}))
 		} catch (error) {
 			// Fall back to v1 bundled data
-			console.warn('API unavailable, using bundled v1 data');
-			return await loadV1Channels();
+			console.warn('API unavailable, using bundled v1 data')
+			return await loadV1Channels()
 		}
 	}
 
@@ -115,16 +116,16 @@ export class DataSource {
 	async getChannel(slug) {
 		try {
 			// Try v2 API first
-			const channel = await this.apiRequest(`/channels/${slug}`);
-			return channelSchema.parse({ ...channel, source: 'v2' });
+			const channel = await this.apiRequest(`/channels/${slug}`)
+			return channelSchema.parse({...channel, source: 'v2'})
 		} catch (error) {
 			// Fall back to v1 bundled data
-			const v1Channels = await loadV1Channels();
-			const channel = v1Channels.find(ch => ch.slug === slug);
+			const v1Channels = await loadV1Channels()
+			const channel = v1Channels.find((ch) => ch.slug === slug)
 			if (!channel) {
-				throw new Error(`Channel not found: ${slug}`);
+				throw new Error(`Channel not found: ${slug}`)
 			}
-			return channel;
+			return channel
 		}
 	}
 
@@ -132,49 +133,53 @@ export class DataSource {
 	 * Create a new channel (v2 only)
 	 */
 	async createChannel(data) {
-		this.requireAuth();
+		this.requireAuth()
 		const channel = await this.apiRequest('/channels', {
 			method: 'POST',
 			body: JSON.stringify(data)
-		});
-		return channelSchema.parse({ ...channel, source: 'v2' });
+		})
+		return channelSchema.parse({...channel, source: 'v2'})
 	}
 
 	/**
 	 * Update a channel (v2 only)
 	 */
 	async updateChannel(slug, data) {
-		this.requireAuth();
+		this.requireAuth()
 
 		// Check if it's a v1 channel
-		const channel = await this.getChannel(slug);
+		const channel = await this.getChannel(slug)
 		if (channel.source === 'v1') {
-			throw new Error(`Cannot modify v1 channel: ${slug}. This is a read-only archived channel.`);
+			throw new Error(
+				`Cannot modify v1 channel: ${slug}. This is a read-only archived channel.`
+			)
 		}
 
 		const updated = await this.apiRequest(`/channels/${slug}`, {
 			method: 'PATCH',
 			body: JSON.stringify(data)
-		});
-		return channelSchema.parse({ ...updated, source: 'v2' });
+		})
+		return channelSchema.parse({...updated, source: 'v2'})
 	}
 
 	/**
 	 * Delete a channel (v2 only)
 	 */
 	async deleteChannel(slug) {
-		this.requireAuth();
+		this.requireAuth()
 
 		// Check if it's a v1 channel
-		const channel = await this.getChannel(slug);
+		const channel = await this.getChannel(slug)
 		if (channel.source === 'v1') {
-			throw new Error(`Cannot delete v1 channel: ${slug}. This is a read-only archived channel.`);
+			throw new Error(
+				`Cannot delete v1 channel: ${slug}. This is a read-only archived channel.`
+			)
 		}
 
 		await this.apiRequest(`/channels/${slug}`, {
 			method: 'DELETE'
-		});
-		return { success: true, slug };
+		})
+		return {success: true, slug}
 	}
 
 	// ===== TRACK OPERATIONS =====
@@ -186,25 +191,25 @@ export class DataSource {
 	async listTracks(filters = {}) {
 		try {
 			// Try v2 API first
-			let endpoint = '/tracks';
+			let endpoint = '/tracks'
 			if (filters.channelSlugs && filters.channelSlugs.length > 0) {
-				const params = new URLSearchParams();
-				filters.channelSlugs.forEach(slug => params.append('channel', slug));
-				endpoint += `?${params.toString()}`;
+				const params = new URLSearchParams()
+				filters.channelSlugs.forEach((slug) => params.append('channel', slug))
+				endpoint += `?${params.toString()}`
 			}
-			const tracks = await this.apiRequest(endpoint);
-			return tracks.map(tr => trackSchema.parse({ ...tr, source: 'v2' }));
+			const tracks = await this.apiRequest(endpoint)
+			return tracks.map((tr) => trackSchema.parse({...tr, source: 'v2'}))
 		} catch (error) {
 			// Fall back to v1 bundled data
-			console.warn('API unavailable, using bundled v1 data');
-			let tracks = await loadV1Tracks();
+			console.warn('API unavailable, using bundled v1 data')
+			let tracks = await loadV1Tracks()
 
 			// Filter by channel slugs if requested
 			if (filters.channelSlugs && filters.channelSlugs.length > 0) {
-				tracks = tracks.filter(tr => filters.channelSlugs.includes(tr.slug));
+				tracks = tracks.filter((tr) => filters.channelSlugs.includes(tr.slug))
 			}
 
-			return tracks;
+			return tracks
 		}
 	}
 
@@ -214,16 +219,16 @@ export class DataSource {
 	async getTrack(id) {
 		try {
 			// Try v2 API first
-			const track = await this.apiRequest(`/tracks/${id}`);
-			return trackSchema.parse({ ...track, source: 'v2' });
+			const track = await this.apiRequest(`/tracks/${id}`)
+			return trackSchema.parse({...track, source: 'v2'})
 		} catch (error) {
 			// Fall back to v1 bundled data
-			const v1Tracks = await loadV1Tracks();
-			const track = v1Tracks.find(tr => tr.id === id);
+			const v1Tracks = await loadV1Tracks()
+			const track = v1Tracks.find((tr) => tr.id === id)
 			if (!track) {
-				throw new Error(`Track not found: ${id}`);
+				throw new Error(`Track not found: ${id}`)
 			}
-			return track;
+			return track
 		}
 	}
 
@@ -231,49 +236,53 @@ export class DataSource {
 	 * Create a new track (v2 only)
 	 */
 	async createTrack(data) {
-		this.requireAuth();
+		this.requireAuth()
 		const track = await this.apiRequest('/tracks', {
 			method: 'POST',
 			body: JSON.stringify(data)
-		});
-		return trackSchema.parse({ ...track, source: 'v2' });
+		})
+		return trackSchema.parse({...track, source: 'v2'})
 	}
 
 	/**
 	 * Update a track (v2 only)
 	 */
 	async updateTrack(id, data) {
-		this.requireAuth();
+		this.requireAuth()
 
 		// Check if it's a v1 track
-		const track = await this.getTrack(id);
+		const track = await this.getTrack(id)
 		if (track.source === 'v1') {
-			throw new Error(`Cannot modify v1 track: ${id}. This is a read-only archived track.`);
+			throw new Error(
+				`Cannot modify v1 track: ${id}. This is a read-only archived track.`
+			)
 		}
 
 		const updated = await this.apiRequest(`/tracks/${id}`, {
 			method: 'PATCH',
 			body: JSON.stringify(data)
-		});
-		return trackSchema.parse({ ...updated, source: 'v2' });
+		})
+		return trackSchema.parse({...updated, source: 'v2'})
 	}
 
 	/**
 	 * Delete a track (v2 only)
 	 */
 	async deleteTrack(id) {
-		this.requireAuth();
+		this.requireAuth()
 
 		// Check if it's a v1 track
-		const track = await this.getTrack(id);
+		const track = await this.getTrack(id)
 		if (track.source === 'v1') {
-			throw new Error(`Cannot delete v1 track: ${id}. This is a read-only archived track.`);
+			throw new Error(
+				`Cannot delete v1 track: ${id}. This is a read-only archived track.`
+			)
 		}
 
 		await this.apiRequest(`/tracks/${id}`, {
 			method: 'DELETE'
-		});
-		return { success: true, id };
+		})
+		return {success: true, id}
 	}
 }
 
@@ -281,5 +290,5 @@ export class DataSource {
  * Create a data source instance with optional config
  */
 export function createDataSource(config) {
-	return new DataSource(config);
+	return new DataSource(config)
 }

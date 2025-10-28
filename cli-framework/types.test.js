@@ -1,12 +1,12 @@
-import { test, expect, describe } from 'bun:test';
+import {describe, expect, test} from 'bun:test'
 import {
 	ArgSchema,
-	OptionSchema,
-	CommandSchema,
-	validateCommandDefinition,
 	CLIError,
+	CommandSchema,
 	ErrorTypes,
-} from './types.js';
+	OptionSchema,
+	validateCommandDefinition
+} from './types.js'
 
 describe('ArgSchema', () => {
 	test('validates valid arg definition', () => {
@@ -14,77 +14,77 @@ describe('ArgSchema', () => {
 			name: 'slug',
 			description: 'Channel slug',
 			required: true,
-			multiple: false,
-		};
-		expect(() => ArgSchema.parse(arg)).not.toThrow();
-	});
+			multiple: false
+		}
+		expect(() => ArgSchema.parse(arg)).not.toThrow()
+	})
 
 	test('sets default values', () => {
 		const arg = ArgSchema.parse({
 			name: 'slug',
-			description: 'Channel slug',
-		});
-		expect(arg.required).toBe(false);
-		expect(arg.multiple).toBe(false);
-	});
+			description: 'Channel slug'
+		})
+		expect(arg.required).toBe(false)
+		expect(arg.multiple).toBe(false)
+	})
 
 	test('rejects invalid arg', () => {
 		expect(() =>
 			ArgSchema.parse({
 				name: '',
-				description: 'Invalid',
+				description: 'Invalid'
 			})
-		).toThrow();
-	});
-});
+		).toThrow()
+	})
+})
 
 describe('OptionSchema', () => {
 	test('validates boolean option', () => {
 		const option = {
 			type: 'boolean',
 			description: 'Output as JSON',
-			default: true,
-		};
-		expect(() => OptionSchema.parse(option)).not.toThrow();
-	});
+			default: true
+		}
+		expect(() => OptionSchema.parse(option)).not.toThrow()
+	})
 
 	test('validates string option with short flag', () => {
 		const option = {
 			type: 'string',
 			description: 'Limit results',
-			short: 'l',
-		};
-		expect(() => OptionSchema.parse(option)).not.toThrow();
-	});
+			short: 'l'
+		}
+		expect(() => OptionSchema.parse(option)).not.toThrow()
+	})
 
 	test('validates option with conflicts', () => {
 		const option = {
 			type: 'boolean',
 			description: 'Output as SQL',
-			conflicts: ['json', 'yaml'],
-		};
-		expect(() => OptionSchema.parse(option)).not.toThrow();
-	});
+			conflicts: ['json', 'yaml']
+		}
+		expect(() => OptionSchema.parse(option)).not.toThrow()
+	})
 
 	test('rejects invalid type', () => {
 		expect(() =>
 			OptionSchema.parse({
 				type: 'number',
-				description: 'Invalid type',
+				description: 'Invalid type'
 			})
-		).toThrow();
-	});
+		).toThrow()
+	})
 
 	test('rejects invalid short flag (multiple chars)', () => {
 		expect(() =>
 			OptionSchema.parse({
 				type: 'string',
 				description: 'Invalid',
-				short: 'ab',
+				short: 'ab'
 			})
-		).toThrow();
-	});
-});
+		).toThrow()
+	})
+})
 
 describe('CommandSchema', () => {
 	test('validates complete command definition', () => {
@@ -95,96 +95,96 @@ describe('CommandSchema', () => {
 					name: 'slug',
 					description: 'Channel slug',
 					required: true,
-					multiple: true,
-				},
+					multiple: true
+				}
 			],
 			options: {
 				json: {
 					type: 'boolean',
 					description: 'Output as JSON',
-					default: true,
+					default: true
 				},
 				sql: {
 					type: 'boolean',
 					description: 'Output as SQL',
-					conflicts: ['json'],
-				},
+					conflicts: ['json']
+				}
 			},
-			handler: async ({ args, flags, context }) => {
-				return args;
+			handler: async ({args, flags, context}) => {
+				return args
 			},
-			examples: ['r4 channel view ko002', 'r4 channel view ko002 --sql'],
-		};
+			examples: ['r4 channel view ko002', 'r4 channel view ko002 --sql']
+		}
 
-		expect(() => CommandSchema.parse(command)).not.toThrow();
-	});
+		expect(() => CommandSchema.parse(command)).not.toThrow()
+	})
 
 	test('validates minimal command definition', () => {
 		const command = {
 			description: 'Simple command',
-			handler: async () => {},
-		};
+			handler: async () => {}
+		}
 
-		const parsed = CommandSchema.parse(command);
-		expect(parsed.args).toEqual([]);
-		expect(parsed.options).toEqual({});
-	});
+		const parsed = CommandSchema.parse(command)
+		expect(parsed.args).toEqual([])
+		expect(parsed.options).toEqual({})
+	})
 
 	test('rejects command without handler', () => {
 		expect(() =>
 			CommandSchema.parse({
-				description: 'Invalid command',
+				description: 'Invalid command'
 			})
-		).toThrow();
-	});
+		).toThrow()
+	})
 
 	test('rejects command without description', () => {
 		expect(() =>
 			CommandSchema.parse({
-				handler: async () => {},
+				handler: async () => {}
 			})
-		).toThrow();
-	});
-});
+		).toThrow()
+	})
+})
 
 describe('validateCommandDefinition', () => {
 	test('validates valid command', () => {
 		const command = {
 			description: 'Test command',
-			handler: async () => {},
-		};
+			handler: async () => {}
+		}
 
-		const validated = validateCommandDefinition(command);
-		expect(validated.description).toBe('Test command');
-	});
+		const validated = validateCommandDefinition(command)
+		expect(validated.description).toBe('Test command')
+	})
 
 	test('throws CLIError for invalid command', () => {
 		try {
 			validateCommandDefinition({
-				description: 'Invalid',
+				description: 'Invalid'
 				// missing handler
-			});
-			expect(true).toBe(false); // should not reach here
+			})
+			expect(true).toBe(false) // should not reach here
 		} catch (error) {
-			expect(error).toBeInstanceOf(CLIError);
-			expect(error.type).toBe(ErrorTypes.INVALID_COMMAND_DEFINITION);
-			expect(error.message).toContain('Invalid command definition');
+			expect(error).toBeInstanceOf(CLIError)
+			expect(error.type).toBe(ErrorTypes.INVALID_COMMAND_DEFINITION)
+			expect(error.message).toContain('Invalid command definition')
 		}
-	});
-});
+	})
+})
 
 describe('CLIError', () => {
 	test('creates error with type and context', () => {
 		const error = new CLIError(
 			ErrorTypes.UNKNOWN_COMMAND,
 			'Command not found: foo',
-			{ available: ['bar', 'baz'] }
-		);
+			{available: ['bar', 'baz']}
+		)
 
-		expect(error).toBeInstanceOf(Error);
-		expect(error.name).toBe('CLIError');
-		expect(error.type).toBe(ErrorTypes.UNKNOWN_COMMAND);
-		expect(error.message).toBe('Command not found: foo');
-		expect(error.context).toEqual({ available: ['bar', 'baz'] });
-	});
-});
+		expect(error).toBeInstanceOf(Error)
+		expect(error.name).toBe('CLIError')
+		expect(error.type).toBe(ErrorTypes.UNKNOWN_COMMAND)
+		expect(error.message).toBe('Command not found: foo')
+		expect(error.context).toEqual({available: ['bar', 'baz']})
+	})
+})

@@ -6,10 +6,10 @@ export default {
 		limit: {
 			type: 'string',
 			description: 'Limit results',
-			parse: (val) => parseInt(val, 10),
-		},
+			parse: (val) => parseInt(val, 10)
+		}
 	},
-	handler: async ({ flags }) => {
-		return { success: true, command: 'channel:list', limit: flags.limit };
-	},
-};
+	handler: async ({flags}) => {
+		return {success: true, command: 'channel:list', limit: flags.limit}
+	}
+}

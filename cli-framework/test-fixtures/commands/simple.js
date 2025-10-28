@@ -4,6 +4,6 @@ export default {
 	args: [],
 	options: {},
 	handler: async () => {
-		return { success: true, command: 'simple' };
-	},
-};
+		return {success: true, command: 'simple'}
+	}
+}

@@ -4,16 +4,19 @@ const os = require('os')
 const args = require('args')
 const fs = require('fs-extra')
 const path = require('path')
-const {
-	tagsFromString,
-	uniqueTagsFromList
-} = require('radio4000-sdk')
+const {tagsFromString, uniqueTagsFromList} = require('radio4000-sdk')
 
 args
 	.option('sorted', 'List all tags, and order them by occurence')
 	.option('generate', 'Generate the tags folder structure for a channel')
-	.example('r4 tags a-channel', 'List the tags for the channel with the slug "a-channel"')
-	.example('r4 tags a-channel --sorted', 'Sorted list (most occurence) of the tags for the channel with the slug "a-channel"')
+	.example(
+		'r4 tags a-channel',
+		'List the tags for the channel with the slug "a-channel"'
+	)
+	.example(
+		'r4 tags a-channel --sorted',
+		'Sorted list (most occurence) of the tags for the channel with the slug "a-channel"'
+	)
 
 const flags = args.parse(process.argv, {
 	version: false,
@@ -25,41 +28,39 @@ if (args.sub.length === 0) {
 	args.showHelp()
 }
 
-let slug = args.sub[0] || ''
-
+const slug = args.sub[0] || ''
 
 // util
 async function asyncForEach(array, callback) {
-  for (let index = 0; index < array.length; index++) {
-    await callback(array[index], index, array);
-  }
+	for (let index = 0; index < array.length; index++) {
+		await callback(array[index], index, array)
+	}
 }
 
 // With async/await:
 async function readChannelData(channelSlug) {
 	let channelData
-  try {
-    channelData = await fs.readJson(`./${channelSlug}/${channelSlug}.json`)
-  } catch (error) {
-		console.log(`Missing file at ./${channelSlug}/${channelSlug}.json; See command: r4 init --help`)
+	try {
+		channelData = await fs.readJson(`./${channelSlug}/${channelSlug}.json`)
+	} catch (error) {
+		console.log(
+			`Missing file at ./${channelSlug}/${channelSlug}.json; See command: r4 init --help`
+		)
 		return
-  }
+	}
 	return channelData
 }
 
 const showChannelTags = (channelData) => {
 	if (!channelData || !channelData.tracks.length) return
 	const t = uniqueTagsFromList(channelData.tracks)
-	t.tags
-		.sort((a, b) => a.localeCompare(b))
-		.forEach(tag => console.log(tag))
+	t.tags.sort((a, b) => a.localeCompare(b)).forEach((tag) => console.log(tag))
 }
 
 const showSortedChannelTags = (channelData) => {
 	if (!channelData || !channelData.tracks.length) return
 	const t = uniqueTagsFromList(channelData.tracks)
-	t.sortedTags
-		.forEach(tag => console.log(tag[1], tag[0]))
+	t.sortedTags.forEach((tag) => console.log(tag[1], tag[0]))
 }
 
 const generateFolderStructure = async ({tracks, slug: channelSlug}) => {
@@ -81,7 +82,7 @@ const generateFolderStructure = async ({tracks, slug: channelSlug}) => {
 	// for each track, generate a hard link,
 	// to a folder /tags/tag/:track-name, for each of its tags,
 	// if the track exists locally
-	let exisitingTracksWithTags = []
+	const exisitingTracksWithTags = []
 	await asyncForEach(tracks, async (track) => {
 		const tags = tagsFromString(track.body)
 		if (!tags || !tags.length > 0) return
@@ -92,7 +93,7 @@ const generateFolderStructure = async ({tracks, slug: channelSlug}) => {
 		if (!trackExists) return
 		exisitingTracksWithTags.push(track)
 
-		const writeTracksAtTagPromises = tags.map(tag => {
+		const writeTracksAtTagPromises = tags.map((tag) => {
 			const trackLinkTagPath = `./${channelSlug}/tags/${tag}/${track.title}.m4a`
 			return fs.ensureLink(trackPath, trackLinkTagPath)
 		})
@@ -106,16 +107,14 @@ const generateFolderStructure = async ({tracks, slug: channelSlug}) => {
 				return
 			}
 		}
-
 	})
-	console.log(`Hard linked ${exisitingTracksWithTags.length} existing tracks with tags, to the "./${channelSlug}/tags" folder`)
+	console.log(
+		`Hard linked ${exisitingTracksWithTags.length} existing tracks with tags, to the "./${channelSlug}/tags" folder`
+	)
 }
 
-const main = async function() {
-	const {
-		sorted,
-		generate
-	} = flags
+const main = async () => {
+	const {sorted, generate} = flags
 
 	const chanelData = await readChannelData(slug)
 

@@ -28,15 +28,19 @@ Prefer `npm` (over `yarn`, as the yarn linking is not global with nvm).
 - `npm i -g r4`, to install r4 globally
 - `r4` should now be available as a command in your terminal/shell
 
-## From gitlab directly
+# Get channels, pipe to jq, convert to SQL
+  r4 channel list --limit 10 | jq '.[].slug'
+  r4 channel list --limit 5 --sql > channels.sql
+
+## From repo directly
 
 To install r4 as a global npm package from a gitab repository do:
 
-- `npm i -g gitlab:internet4000/r4`
+- `npm i -g github:radio4000/r4`
 
 # DEVELOPMENT
 
-1. git clone git@github.com:internet4000/r4.git
+1. git clone git@github.com:radio4000/r4.git
 2. cd r4
 3. npm link
 

@@ -6,7 +6,10 @@ const path = require('path')
 
 args
 	.option('debug', 'More outputs to the console')
-	.example('r4 clean a-channel', 'Download the channel with the slug "a-channel"')
+	.example(
+		'r4 clean a-channel',
+		'Download the channel with the slug "a-channel"'
+	)
 
 const flags = args.parse(process.argv, {
 	version: false,
@@ -14,7 +17,7 @@ const flags = args.parse(process.argv, {
 	mainColor: ['reset']
 })
 
-let slug = args.sub[0] || ''
+const slug = args.sub[0] || ''
 
 const {debug} = flags
 
@@ -22,7 +25,7 @@ const cleanPath = async (folderPath) => {
 	// Remove '' empty string for all files without extension
 	const extToClean = ['', '.part', '.ytdl']
 
-	const filesToClean = fs.readdirSync(folderPath).filter(file => {
+	const filesToClean = fs.readdirSync(folderPath).filter((file) => {
 		const extname = path.extname(file)
 		if (extToClean.includes(extname)) {
 			return true
@@ -31,7 +34,7 @@ const cleanPath = async (folderPath) => {
 	})
 
 	if (filesToClean.length) {
-		filesToClean.forEach(filePath =>{
+		filesToClean.forEach((filePath) => {
 			const pathToUnlink = folderPath + filePath
 			fs.unlink(pathToUnlink)
 			debug && console.log('Cleaned', pathToUnlink)
@@ -43,7 +46,7 @@ const cleanPath = async (folderPath) => {
 	debug && console.log(`${filesToClean.length} files cleaned`)
 }
 
-const main = async function() {
+const main = async () => {
 	const pathToClean = `./${slug}/`
 	if (!slug) {
 		return

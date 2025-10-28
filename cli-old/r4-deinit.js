@@ -18,7 +18,7 @@ let slug = args.sub[0] || ''
 
 const r4ConfigPath = './r4.json'
 
-const main = async function() {
+const main = async () => {
 	const {debug} = flags
 	slug = slug || ''
 

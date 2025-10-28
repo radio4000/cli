@@ -6,22 +6,22 @@ export default {
 			name: 'slug',
 			description: 'Channel slug',
 			required: true,
-			multiple: false,
-		},
+			multiple: false
+		}
 	],
 	options: {
 		json: {
 			type: 'boolean',
 			description: 'Output as JSON',
-			default: true,
-		},
+			default: true
+		}
 	},
-	handler: async ({ args, flags }) => {
+	handler: async ({args, flags}) => {
 		return {
 			success: true,
 			command: 'channel:view',
 			slug: args.slug,
-			json: flags.json,
-		};
-	},
-};
+			json: flags.json
+		}
+	}
+}

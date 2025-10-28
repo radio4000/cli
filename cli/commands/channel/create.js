@@ -1,5 +1,5 @@
-import { createChannel } from '../../lib/data.js';
-import { channelSchema } from '../../lib/schema.js';
+import {createChannel} from '../../lib/data.js'
+import {channelSchema} from '../../lib/schema.js'
 
 export default {
 	description: 'Create a new channel',
@@ -37,28 +37,28 @@ export default {
 	},
 
 	validate: channelSchema
-		.pick({ slug: true, name: true, description: true, image: true })
-		.partial({ description: true, image: true }),
+		.pick({slug: true, name: true, description: true, image: true})
+		.partial({description: true, image: true}),
 
-	handler: async ({ args, flags }) => {
+	handler: async ({args, flags}) => {
 		const channelData = {
 			slug: args.slug,
 			name: flags.name,
 			description: flags.description || '',
 			image: flags.image || ''
-		};
+		}
 
-		const channel = await createChannel(channelData);
+		const channel = await createChannel(channelData)
 
 		return {
 			data: channel,
 			format: flags.sql ? 'sql' : 'json',
-			formatOptions: flags.sql ? { table: 'channels' } : undefined
-		};
+			formatOptions: flags.sql ? {table: 'channels'} : undefined
+		}
 	},
 
 	examples: [
 		'r4 channel create mysounds --name "My Sounds"',
 		'r4 channel create mysounds --name "My Sounds" --description "A collection"'
 	]
-};
+}

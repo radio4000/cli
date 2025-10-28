@@ -1,4 +1,4 @@
-import { deleteTrack } from '../../lib/data.js';
+import {deleteTrack} from '../../lib/data.js'
 
 export default {
 	description: 'Delete one or more tracks',
@@ -20,19 +20,16 @@ export default {
 		}
 	},
 
-	handler: async ({ args, flags }) => {
-		const ids = Array.isArray(args.id) ? args.id : [args.id];
-		const results = await Promise.all(ids.map(id => deleteTrack(id)));
+	handler: async ({args, flags}) => {
+		const ids = Array.isArray(args.id) ? args.id : [args.id]
+		const results = await Promise.all(ids.map((id) => deleteTrack(id)))
 
 		return {
 			data: results.length === 1 ? results[0] : results,
 			format: flags.sql ? 'sql' : 'json',
-			formatOptions: flags.sql ? { table: 'tracks' } : undefined
-		};
+			formatOptions: flags.sql ? {table: 'tracks'} : undefined
+		}
 	},
 
-	examples: [
-		'r4 track delete abc123',
-		'r4 track delete abc123 def456 ghi789'
-	]
-};
+	examples: ['r4 track delete abc123', 'r4 track delete abc123 def456 ghi789']
+}

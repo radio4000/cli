@@ -1,5 +1,5 @@
-import { createTrack } from '../../lib/data.js';
-import { trackSchema } from '../../lib/schema.js';
+import {createTrack} from '../../lib/data.js'
+import {trackSchema} from '../../lib/schema.js'
 
 export default {
 	description: 'Create a new track',
@@ -28,27 +28,27 @@ export default {
 	},
 
 	validate: trackSchema
-		.pick({ title: true, url: true })
-		.extend({ channel: trackSchema.shape.slug }),
+		.pick({title: true, url: true})
+		.extend({channel: trackSchema.shape.slug}),
 
-	handler: async ({ flags }) => {
+	handler: async ({flags}) => {
 		const trackData = {
 			slug: flags.channel,
 			title: flags.title,
 			url: flags.url
-		};
+		}
 
-		const track = await createTrack(trackData);
+		const track = await createTrack(trackData)
 
 		return {
 			data: track,
 			format: flags.sql ? 'sql' : 'json',
-			formatOptions: flags.sql ? { table: 'tracks' } : undefined
-		};
+			formatOptions: flags.sql ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: [
 		'r4 track create --channel mysounds --title "Song Name" --url "https://youtube.com/..."',
 		'echo \'{"title":"Song","url":"..."}\' | r4 track create --channel mysounds'
 	]
-};
+}

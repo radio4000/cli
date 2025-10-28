@@ -1,5 +1,5 @@
-import { getChannel } from '../../lib/data.js';
-import { z } from 'zod';
+import {z} from 'zod'
+import {getChannel} from '../../lib/data.js'
 
 export default {
 	description: 'View detailed information about one or more channels',
@@ -25,15 +25,15 @@ export default {
 		slug: z.union([z.string(), z.array(z.string())])
 	}),
 
-	handler: async ({ args, flags }) => {
-		const slugs = Array.isArray(args.slug) ? args.slug : [args.slug];
-		const channels = await Promise.all(slugs.map(slug => getChannel(slug)));
+	handler: async ({args, flags}) => {
+		const slugs = Array.isArray(args.slug) ? args.slug : [args.slug]
+		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
 
 		return {
 			data: channels.length === 1 ? channels[0] : channels,
 			format: flags.sql ? 'sql' : 'json',
-			formatOptions: flags.sql ? { table: 'channels' } : undefined
-		};
+			formatOptions: flags.sql ? {table: 'channels'} : undefined
+		}
 	},
 
 	examples: [
@@ -41,4 +41,4 @@ export default {
 		'r4 channel view ko002 oskar',
 		'r4 channel view ko002 --sql'
 	]
-};
+}

@@ -10,11 +10,11 @@
  * @param {boolean} options.pretty - Pretty print JSON (default: true)
  * @returns {string} Formatted JSON string
  */
-export function formatJSON(data, { pretty = true } = {}) {
+export function formatJSON(data, {pretty = true} = {}) {
 	if (pretty) {
-		return JSON.stringify(data, null, 2);
+		return JSON.stringify(data, null, 2)
 	}
-	return JSON.stringify(data);
+	return JSON.stringify(data)
 }
 
 /**
@@ -24,20 +24,20 @@ export function formatJSON(data, { pretty = true } = {}) {
  */
 function escapeSQLValue(value) {
 	if (value === null || value === undefined) {
-		return 'NULL';
+		return 'NULL'
 	}
 
 	if (typeof value === 'number') {
-		return String(value);
+		return String(value)
 	}
 
 	if (typeof value === 'boolean') {
-		return value ? 'TRUE' : 'FALSE';
+		return value ? 'TRUE' : 'FALSE'
 	}
 
 	// String escaping - escape single quotes
-	const str = String(value);
-	return `'${str.replace(/'/g, "''")}'`;
+	const str = String(value)
+	return `'${str.replace(/'/g, "''")}'`
 }
 
 /**
@@ -47,44 +47,44 @@ function escapeSQLValue(value) {
  * @param {string} options.table - Table name for INSERT statements
  * @returns {string} SQL INSERT statements
  */
-export function formatSQL(data, { table = 'data' } = {}) {
+export function formatSQL(data, {table = 'data'} = {}) {
 	// Handle single object
 	if (!Array.isArray(data)) {
-		data = [data];
+		data = [data]
 	}
 
 	if (data.length === 0) {
-		return '-- No data to insert';
+		return '-- No data to insert'
 	}
 
 	// Get all unique columns from all objects
-	const columns = new Set();
+	const columns = new Set()
 	for (const row of data) {
 		if (typeof row === 'object' && row !== null) {
-			Object.keys(row).forEach((key) => columns.add(key));
+			Object.keys(row).forEach((key) => columns.add(key))
 		}
 	}
 
-	const columnList = Array.from(columns);
+	const columnList = Array.from(columns)
 
 	if (columnList.length === 0) {
-		return '-- No columns found in data';
+		return '-- No columns found in data'
 	}
 
 	// Generate INSERT statements
-	const statements = [];
+	const statements = []
 
 	for (const row of data) {
 		if (typeof row !== 'object' || row === null) {
-			continue;
+			continue
 		}
 
-		const values = columnList.map((col) => escapeSQLValue(row[col]));
-		const statement = `INSERT INTO ${table} (${columnList.join(', ')}) VALUES (${values.join(', ')});`;
-		statements.push(statement);
+		const values = columnList.map((col) => escapeSQLValue(row[col]))
+		const statement = `INSERT INTO ${table} (${columnList.join(', ')}) VALUES (${values.join(', ')});`
+		statements.push(statement)
 	}
 
-	return statements.join('\n');
+	return statements.join('\n')
 }
 
 /**
@@ -94,41 +94,41 @@ export function formatSQL(data, { table = 'data' } = {}) {
  */
 export function formatPlainText(data) {
 	if (typeof data === 'string') {
-		return data;
+		return data
 	}
 
 	if (typeof data === 'number' || typeof data === 'boolean') {
-		return String(data);
+		return String(data)
 	}
 
 	if (data === null || data === undefined) {
-		return '';
+		return ''
 	}
 
 	if (Array.isArray(data)) {
-		return data.map((item) => formatPlainText(item)).join('\n');
+		return data.map((item) => formatPlainText(item)).join('\n')
 	}
 
 	if (typeof data === 'object') {
-		const lines = [];
+		const lines = []
 		for (const [key, value] of Object.entries(data)) {
 			if (typeof value === 'object' && value !== null) {
-				lines.push(`${key}:`);
-				const nested = formatPlainText(value);
+				lines.push(`${key}:`)
+				const nested = formatPlainText(value)
 				lines.push(
 					nested
 						.split('\n')
 						.map((line) => `  ${line}`)
 						.join('\n')
-				);
+				)
 			} else {
-				lines.push(`${key}: ${value}`);
+				lines.push(`${key}: ${value}`)
 			}
 		}
-		return lines.join('\n');
+		return lines.join('\n')
 	}
 
-	return String(data);
+	return String(data)
 }
 
 /**
@@ -141,12 +141,12 @@ export function formatPlainText(data) {
 export function formatOutput(data, format = 'json', options = {}) {
 	switch (format) {
 		case 'json':
-			return formatJSON(data, options);
+			return formatJSON(data, options)
 		case 'sql':
-			return formatSQL(data, options);
+			return formatSQL(data, options)
 		case 'text':
-			return formatPlainText(data);
+			return formatPlainText(data)
 		default:
-			throw new Error(`Unknown output format: ${format}`);
+			throw new Error(`Unknown output format: ${format}`)
 	}
 }

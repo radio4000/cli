@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import {z} from 'zod'
 
 /**
  * Schema for argument definition
@@ -8,21 +8,21 @@ export const ArgSchema = z.object({
 	name: z.string().min(1),
 	description: z.string(),
 	required: z.boolean().optional().default(false),
-	multiple: z.boolean().optional().default(false), // accepts multiple values
-});
+	multiple: z.boolean().optional().default(false) // accepts multiple values
+})
 
 /**
  * Schema for option definition (flags)
  * Based on Node.js util.parseArgs format
  */
 export const OptionSchema = z.object({
-	type: z.enum(['boolean', 'string']),
+	type: z.enum(['boolean', 'string', 'number']),
 	description: z.string(),
 	default: z.union([z.boolean(), z.string(), z.number()]).optional(),
 	short: z.string().length(1).optional(), // short flag like -h
 	conflicts: z.array(z.string()).optional(), // conflicting options
-	parse: z.function().optional(), // custom parser for validation/transformation
-});
+	parse: z.function().optional() // custom parser for validation/transformation
+})
 
 /**
  * Schema for command definition
@@ -35,19 +35,19 @@ export const CommandSchema = z.object({
 	validate: z.any().optional(), // Zod schema for validation (can't validate Zod with Zod easily)
 	handler: z.function(),
 	examples: z.array(z.string()).optional(),
-	hidden: z.boolean().optional().default(false), // hide from help
-});
+	hidden: z.boolean().optional().default(false) // hide from help
+})
 
 /**
  * Custom error types for CLI
  */
 export class CLIError extends Error {
 	constructor(type, message, context = {}) {
-		super(message);
-		this.name = 'CLIError';
-		this.type = type;
-		this.context = context;
-		Error.captureStackTrace(this, this.constructor);
+		super(message)
+		this.name = 'CLIError'
+		this.type = type
+		this.context = context
+		Error.captureStackTrace(this, this.constructor)
 	}
 }
 
@@ -60,8 +60,8 @@ export const ErrorTypes = {
 	INVALID_ARGUMENT: 'invalid_argument',
 	CONFLICTING_OPTIONS: 'conflicting_options',
 	HANDLER_ERROR: 'handler_error',
-	INVALID_COMMAND_DEFINITION: 'invalid_command_definition',
-};
+	INVALID_COMMAND_DEFINITION: 'invalid_command_definition'
+}
 
 /**
  * Validate a command definition
@@ -71,12 +71,12 @@ export const ErrorTypes = {
  */
 export function validateCommandDefinition(commandDef) {
 	try {
-		return CommandSchema.parse(commandDef);
+		return CommandSchema.parse(commandDef)
 	} catch (error) {
 		throw new CLIError(
 			ErrorTypes.INVALID_COMMAND_DEFINITION,
 			`Invalid command definition: ${error.message}`,
-			{ zodError: error }
-		);
+			{zodError: error}
+		)
 	}
 }

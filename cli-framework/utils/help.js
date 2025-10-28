@@ -8,16 +8,16 @@
  * @returns {string} Formatted argument
  */
 function formatArgUsage(arg) {
-	let formatted = arg.name;
+	let formatted = arg.name
 
 	if (arg.multiple) {
-		formatted = `${formatted}...`;
+		formatted = `${formatted}...`
 	}
 
 	if (arg.required) {
-		return `<${formatted}>`;
+		return `<${formatted}>`
 	}
-	return `[${formatted}]`;
+	return `[${formatted}]`
 }
 
 /**
@@ -27,17 +27,17 @@ function formatArgUsage(arg) {
  * @returns {string} Formatted flag
  */
 function formatOptionFlag(name, def) {
-	let flag = `--${name}`;
+	let flag = `--${name}`
 
 	if (def.short) {
-		flag = `-${def.short}, ${flag}`;
+		flag = `-${def.short}, ${flag}`
 	}
 
 	if (def.type === 'string') {
-		flag = `${flag} <value>`;
+		flag = `${flag} <value>`
 	}
 
-	return flag;
+	return flag
 }
 
 /**
@@ -47,11 +47,11 @@ function formatOptionFlag(name, def) {
  * @returns {string} Padded string
  */
 function pad(str, width) {
-	const remaining = width - str.length;
+	const remaining = width - str.length
 	if (remaining <= 0) {
-		return str;
+		return str
 	}
-	return str + ' '.repeat(remaining);
+	return str + ' '.repeat(remaining)
 }
 
 /**
@@ -61,80 +61,80 @@ function pad(str, width) {
  * @returns {string} Formatted help text
  */
 export function generateCommandHelp(command, commandPath) {
-	const lines = [];
+	const lines = []
 
 	// Usage section
-	lines.push('USAGE');
-	const usageParts = [commandPath];
+	lines.push('USAGE')
+	const usageParts = [commandPath]
 
 	if (command.args.length > 0) {
-		usageParts.push(...command.args.map(formatArgUsage));
+		usageParts.push(...command.args.map(formatArgUsage))
 	}
 
 	if (Object.keys(command.options).length > 0) {
-		usageParts.push('[options]');
+		usageParts.push('[options]')
 	}
 
-	lines.push(`  ${usageParts.join(' ')}`);
-	lines.push('');
+	lines.push(`  ${usageParts.join(' ')}`)
+	lines.push('')
 
 	// Description section
 	if (command.description) {
-		lines.push('DESCRIPTION');
-		lines.push(`  ${command.description}`);
-		lines.push('');
+		lines.push('DESCRIPTION')
+		lines.push(`  ${command.description}`)
+		lines.push('')
 	}
 
 	// Arguments section
 	if (command.args.length > 0) {
-		lines.push('ARGUMENTS');
+		lines.push('ARGUMENTS')
 
 		const maxArgWidth = Math.max(
 			...command.args.map((arg) => formatArgUsage(arg).length)
-		);
+		)
 
 		for (const arg of command.args) {
-			const usage = formatArgUsage(arg);
-			const padded = pad(usage, maxArgWidth + 4);
-			const reqText = arg.required ? '(required)' : '(optional)';
-			lines.push(`  ${padded}${arg.description} ${reqText}`);
+			const usage = formatArgUsage(arg)
+			const padded = pad(usage, maxArgWidth + 4)
+			const reqText = arg.required ? '(required)' : '(optional)'
+			lines.push(`  ${padded}${arg.description} ${reqText}`)
 		}
-		lines.push('');
+		lines.push('')
 	}
 
 	// Options section
 	if (Object.keys(command.options).length > 0) {
-		lines.push('OPTIONS');
+		lines.push('OPTIONS')
 
 		const flags = Object.entries(command.options).map(([name, def]) => ({
 			flag: formatOptionFlag(name, def),
 			description: def.description,
-			default: def.default,
-		}));
+			default: def.default
+		}))
 
-		const maxFlagWidth = Math.max(...flags.map((f) => f.flag.length));
+		const maxFlagWidth = Math.max(...flags.map((f) => f.flag.length))
 
-		for (const { flag, description, default: defaultValue } of flags) {
-			const padded = pad(flag, maxFlagWidth + 4);
-			let desc = description;
+		for (const {flag, description, default: defaultValue} of flags) {
+			const padded = pad(flag, maxFlagWidth + 4)
+			let desc = description
 			if (defaultValue !== undefined) {
-				desc = `${desc} (default: ${defaultValue})`;
+				desc = `${desc} (default: ${defaultValue})`
 			}
-			lines.push(`  ${padded}${desc}`);
+			lines.push(`  ${padded}${desc}`)
 		}
-		lines.push('');
+		lines.push('')
 	}
 
 	// Examples section
 	if (command.examples && command.examples.length > 0) {
-		lines.push('EXAMPLES');
+		lines.push('EXAMPLES')
 		for (const example of command.examples) {
-			lines.push(`  ${example}`);
+			lines.push(`  ${example}`)
 		}
-		lines.push('');
+		lines.push('')
 	}
 
-	return lines.join('\n').trimEnd();
+	return lines.join('\n').trimEnd()
 }
 
 /**
@@ -144,34 +144,36 @@ export function generateCommandHelp(command, commandPath) {
  * @returns {string} Formatted help text
  */
 export function generateGroupHelp(commands, commandPath) {
-	const lines = [];
+	const lines = []
 
-	lines.push('USAGE');
-	lines.push(`  ${commandPath} <command>`);
-	lines.push('');
+	lines.push('USAGE')
+	lines.push(`  ${commandPath} <command>`)
+	lines.push('')
 
 	if (commands.length > 0) {
-		lines.push('COMMANDS');
+		lines.push('COMMANDS')
 
 		// Separate directories and files
-		const dirs = commands.filter((cmd) => cmd.isDirectory);
-		const files = commands.filter((cmd) => !cmd.isDirectory);
+		const dirs = commands.filter((cmd) => cmd.isDirectory)
+		const files = commands.filter((cmd) => !cmd.isDirectory)
 
 		// Show files first (actual commands)
-		const allCommands = [...files, ...dirs];
+		const allCommands = [...files, ...dirs]
 
-		const maxNameWidth = Math.max(...allCommands.map((cmd) => cmd.name.length));
+		const maxNameWidth = Math.max(...allCommands.map((cmd) => cmd.name.length))
 
 		for (const cmd of allCommands) {
-			const padded = pad(cmd.name, maxNameWidth + 4);
-			lines.push(`  ${padded}${cmd.description}`);
+			const padded = pad(cmd.name, maxNameWidth + 4)
+			lines.push(`  ${padded}${cmd.description}`)
 		}
-		lines.push('');
+		lines.push('')
 	}
 
-	lines.push(`Run '${commandPath} <command> --help' for more information on a command.`);
+	lines.push(
+		`Run '${commandPath} <command> --help' for more information on a command.`
+	)
 
-	return lines.join('\n').trimEnd();
+	return lines.join('\n').trimEnd()
 }
 
 /**
@@ -184,37 +186,39 @@ export function generateGroupHelp(commands, commandPath) {
  * @returns {string} Formatted help text
  */
 export function generateMainHelp(commands, programName, options = {}) {
-	const lines = [];
+	const lines = []
 
 	if (options.version) {
-		lines.push(`${programName} v${options.version}`);
+		lines.push(`${programName} v${options.version}`)
 	}
 
 	if (options.description) {
-		lines.push(options.description);
+		lines.push(options.description)
 	}
 
 	if (options.version || options.description) {
-		lines.push('');
+		lines.push('')
 	}
 
-	lines.push('USAGE');
-	lines.push(`  ${programName} <command> [options]`);
-	lines.push('');
+	lines.push('USAGE')
+	lines.push(`  ${programName} <command> [options]`)
+	lines.push('')
 
 	if (commands.length > 0) {
-		lines.push('COMMANDS');
+		lines.push('COMMANDS')
 
-		const maxNameWidth = Math.max(...commands.map((cmd) => cmd.name.length));
+		const maxNameWidth = Math.max(...commands.map((cmd) => cmd.name.length))
 
 		for (const cmd of commands) {
-			const padded = pad(cmd.name, maxNameWidth + 4);
-			lines.push(`  ${padded}${cmd.description}`);
+			const padded = pad(cmd.name, maxNameWidth + 4)
+			lines.push(`  ${padded}${cmd.description}`)
 		}
-		lines.push('');
+		lines.push('')
 	}
 
-	lines.push(`Run '${programName} <command> --help' for more information on a command.`);
+	lines.push(
+		`Run '${programName} <command> --help' for more information on a command.`
+	)
 
-	return lines.join('\n').trimEnd();
+	return lines.join('\n').trimEnd()
 }

@@ -1,4 +1,4 @@
-import { updateTrack } from '../../lib/data.js';
+import {updateTrack} from '../../lib/data.js'
 
 export default {
 	description: 'Update one or more tracks',
@@ -28,26 +28,24 @@ export default {
 		}
 	},
 
-	handler: async ({ args, flags }) => {
-		const ids = Array.isArray(args.id) ? args.id : [args.id];
+	handler: async ({args, flags}) => {
+		const ids = Array.isArray(args.id) ? args.id : [args.id]
 
-		const updates = {};
-		if (flags.title) updates.title = flags.title;
-		if (flags.url) updates.url = flags.url;
+		const updates = {}
+		if (flags.title) updates.title = flags.title
+		if (flags.url) updates.url = flags.url
 
 		if (Object.keys(updates).length === 0) {
-			throw new Error('At least one field must be provided for update');
+			throw new Error('At least one field must be provided for update')
 		}
 
-		const tracks = await Promise.all(
-			ids.map(id => updateTrack(id, updates))
-		);
+		const tracks = await Promise.all(ids.map((id) => updateTrack(id, updates)))
 
 		return {
 			data: tracks.length === 1 ? tracks[0] : tracks,
 			format: flags.sql ? 'sql' : 'json',
-			formatOptions: flags.sql ? { table: 'tracks' } : undefined
-		};
+			formatOptions: flags.sql ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: [
@@ -55,4 +53,4 @@ export default {
 		'r4 track update abc123 --url "https://new-url.com"',
 		'r4 track update abc123 def456 --title "Same Title"'
 	]
-};
+}
