@@ -14,31 +14,34 @@ export default {
 	],
 
 	options: {
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
+		format: {
+			type: 'string',
+			description: 'Output format: text, json, or sql',
+			default: 'json'
 		}
 	},
 
 	validate: z.object({
-		slug: z.union([z.string(), z.array(z.string())])
+		slug: z.union([z.string(), z.array(z.string())]),
+		format: z.enum(['json', 'sql', 'text']).default('json')
 	}),
 
 	handler: async (input) => {
 		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
 		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
+		const format = input.format || 'json'
 
 		return {
 			data: channels.length === 1 ? channels[0] : channels,
-			format: input.sql ? 'sql' : 'json',
-			formatOptions: input.sql ? {table: 'channels'} : undefined
+			format: format,
+			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
 		}
 	},
 
 	examples: [
 		'r4 channel view ko002',
 		'r4 channel view ko002 oskar',
-		'r4 channel view ko002 --sql'
+		'r4 channel view ko002 --format sql',
+		'r4 channel view ko002 --format json'
 	]
 }

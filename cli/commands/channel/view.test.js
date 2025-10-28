@@ -76,3 +76,31 @@ describe('channel view command - v1 and v2 compatibility', () => {
 		}).toThrow('Channel not found: non-existent-channel-12345')
 	})
 })
+
+describe('channel view command - format options', () => {
+	test('formats output as JSON (default)', async () => {
+		const command = await import('./view.js')
+		const result = await command.default.handler({slug: 'ko002'})
+
+		expect(result.format).toBe('json')
+		expect(result.data).toBeDefined()
+		expect(result.data.slug).toBe('ko002')
+	})
+
+	test('formats output as SQL', async () => {
+		const command = await import('./view.js')
+		const result = await command.default.handler({slug: 'ko002', format: 'sql'})
+
+		expect(result.format).toBe('sql')
+		expect(result.formatOptions).toEqual({table: 'channels'})
+		expect(result.data.slug).toBe('ko002')
+	})
+
+	test('formats output as text', async () => {
+		const command = await import('./view.js')
+		const result = await command.default.handler({slug: 'ko002', format: 'text'})
+
+		expect(result.format).toBe('text')
+		expect(result.data.slug).toBe('ko002')
+	})
+})
