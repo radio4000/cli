@@ -263,7 +263,7 @@ export async function writeTrackMetadataFile(track, {debug = false} = {}) {
 	// Build tags section
 	let tagsSection = ''
 	if (track.tags && track.tags.length > 0) {
-		tagsSection = `\nTags: ${track.tags.map((t) => '#' + t).join(' ')}`
+		tagsSection = `\nTags: ${track.tags.map((t) => `#${t}`).join(' ')}`
 	}
 
 	// Format timestamps

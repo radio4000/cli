@@ -447,7 +447,7 @@ describe('runCommand - Context', () => {
 			description: 'Test',
 			args: [],
 			options: {},
-			handler: async (input, {context}) => context
+			handler: async (_input, {context}) => context
 		}
 
 		const context = {auth: {token: 'secret'}, config: {verbose: true}}

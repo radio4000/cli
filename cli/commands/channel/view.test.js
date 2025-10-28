@@ -98,7 +98,10 @@ describe('channel view command - format options', () => {
 
 	test('formats output as text', async () => {
 		const command = await import('./view.js')
-		const result = await command.default.handler({slug: 'ko002', format: 'text'})
+		const result = await command.default.handler({
+			slug: 'ko002',
+			format: 'text'
+		})
 
 		expect(result.format).toBe('text')
 		expect(result.data.slug).toBe('ko002')

@@ -1,4 +1,3 @@
-import {z} from 'zod'
 import {getChannel, listTracks} from '../lib/data.js'
 import {
 	downloadChannel,
@@ -48,10 +47,6 @@ export default {
 			default: false
 		}
 	},
-
-	validate: z.object({
-		slug: z.string().min(1)
-	}),
 
 	handler: async (input) => {
 		const {slug} = input

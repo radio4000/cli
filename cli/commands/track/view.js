@@ -1,4 +1,3 @@
-import {z} from 'zod'
 import {getTrack} from '../../lib/data.js'
 
 export default {
@@ -17,14 +16,15 @@ export default {
 		format: {
 			type: 'string',
 			description: 'Output format: text, json, or sql',
-			default: 'json'
+			default: 'json',
+			parse: (val) => {
+				if (!['json', 'sql', 'text'].includes(val)) {
+					throw new Error('must be json, sql, or text')
+				}
+				return val
+			}
 		}
 	},
-
-	validate: z.object({
-		id: z.union([z.string(), z.array(z.string())]),
-		format: z.enum(['json', 'sql', 'text']).default('json')
-	}),
 
 	handler: async (input) => {
 		const ids = Array.isArray(input.id) ? input.id : [input.id]
