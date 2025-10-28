@@ -13,6 +13,11 @@ export default {
 	],
 
 	options: {
+		confirm: {
+			type: 'boolean',
+			description: 'Confirm deletion (required for safety)',
+			required: true
+		},
 		sql: {
 			type: 'boolean',
 			description: 'Output as SQL statements',

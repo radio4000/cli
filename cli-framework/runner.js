@@ -90,6 +90,15 @@ function parseOptionValues(optionDefs, values) {
 		const hasValue = name in values
 		let value = values[name]
 
+		// Check for required options
+		if (def.required && !hasValue) {
+			throw new CLIError(
+				ErrorTypes.MISSING_ARGUMENT,
+				`Missing required option: --${name}`,
+				{option: name, definition: def}
+			)
+		}
+
 		// Use default if not provided
 		if (!hasValue) {
 			if (def.default !== undefined) {
@@ -101,7 +110,7 @@ function parseOptionValues(optionDefs, values) {
 		// Convert number type from string
 		if (def.type === 'number' && typeof value === 'string') {
 			const num = Number(value)
-			if (isNaN(num)) {
+			if (Number.isNaN(num)) {
 				throw new CLIError(
 					ErrorTypes.INVALID_ARGUMENT,
 					`Invalid number for --${name}: ${value}`,

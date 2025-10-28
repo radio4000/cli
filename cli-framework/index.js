@@ -99,10 +99,11 @@ async function routeCommand(commandsDir, commandPath) {
 
 		// No file or directory found - command doesn't exist
 		const available = await discoverCommands(currentDir)
+		const unknownCommand = consumedPath.concat(segment).join(' ')
 		throw new CLIError(
 			ErrorTypes.UNKNOWN_COMMAND,
-			`Unknown command: ${consumedPath.concat(segment).join(' ')}`,
-			{segment, available}
+			`Unknown command: ${unknownCommand}`,
+			{segment, available, unknownCommand}
 		)
 	}
 
@@ -111,8 +112,8 @@ async function routeCommand(commandsDir, commandPath) {
 	const available = await discoverCommands(currentDir)
 	throw new CLIError(
 		ErrorTypes.UNKNOWN_COMMAND,
-		`Command requires a subcommand: ${consumedPath.join(' ')}`,
-		{available}
+		`'${consumedPath.join(' ')}' requires a subcommand`,
+		{available, commandPath: consumedPath.join(' ')}
 	)
 }
 

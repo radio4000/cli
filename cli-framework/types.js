@@ -18,6 +18,7 @@ export const ArgSchema = z.object({
 export const OptionSchema = z.object({
 	type: z.enum(['boolean', 'string', 'number']),
 	description: z.string(),
+	required: z.boolean().optional(), // mark option as required
 	default: z.union([z.boolean(), z.string(), z.number()]).optional(),
 	short: z.string().length(1).optional(), // short flag like -h
 	conflicts: z.array(z.string()).optional(), // conflicting options
@@ -61,6 +62,36 @@ export const ErrorTypes = {
 	CONFLICTING_OPTIONS: 'conflicting_options',
 	HANDLER_ERROR: 'handler_error',
 	INVALID_COMMAND_DEFINITION: 'invalid_command_definition'
+}
+
+/**
+ * Format a CLIError for display
+ * @param {CLIError} error - The error to format
+ * @returns {string} Formatted error message
+ */
+export function formatCLIError(error) {
+	if (error.type === ErrorTypes.UNKNOWN_COMMAND && error.context?.available) {
+		let output = ''
+
+		// If there's an unknown command (actual mistake), show it
+		if (error.context.unknownCommand) {
+			output += `Unknown command: ${error.context.unknownCommand}\n\n`
+		}
+
+		// Show available options
+		const label = error.context.commandPath ? 'Available subcommands:' : 'Available commands:'
+		const commands = error.context.available.map(cmd => `  ${cmd.name}`).join('\n')
+		output += `${label}\n${commands}`
+
+		return output
+	}
+
+	// Actual errors
+	let output = `Error: ${error.message}`
+	if (error.context && Object.keys(error.context).length > 0) {
+		output += `\nContext: ${JSON.stringify(error.context, null, 2)}`
+	}
+	return output
 }
 
 /**

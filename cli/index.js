@@ -2,6 +2,7 @@
 import {dirname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {executeCommand} from '../cli-framework/index.js'
+import {formatCLIError} from '../cli-framework/types.js'
 import {formatOutput} from '../cli-framework/utils/output.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -25,17 +26,16 @@ async function main() {
 		console.log(output)
 		process.exit(0)
 	} catch (error) {
-		// Handle errors
-		console.error('Error:', error.message)
-		if (error.context) {
-			console.error('Context:', JSON.stringify(error.context, null, 2))
-		}
+		// Handle errors - use framework's error formatter
+		const output = formatCLIError(error)
+
+		// Print to stdout for menu-like messages, stderr for actual errors
 		if (error.type === 'unknown_command' && error.context?.available) {
-			console.error('\nAvailable commands:')
-			error.context.available.forEach((cmd) => {
-				console.error(`  ${cmd}`)
-			})
+			console.log(output)
+		} else {
+			console.error(output)
 		}
+
 		process.exit(1)
 	}
 }

@@ -206,7 +206,7 @@ describe('runCommand - Options (Flags)', () => {
 					description: 'Limit',
 					parse: (val) => {
 						const num = parseInt(val, 10)
-						if (isNaN(num) || num < 1) {
+						if (Number.isNaN(num) || num < 1) {
 							throw new Error('must be a positive number')
 						}
 						return num
@@ -230,7 +230,7 @@ describe('runCommand - Options (Flags)', () => {
 					description: 'Limit',
 					parse: (val) => {
 						const num = parseInt(val, 10)
-						if (isNaN(num) || num < 1) {
+						if (Number.isNaN(num) || num < 1) {
 							throw new Error('must be a positive number')
 						}
 						return num
@@ -247,6 +247,116 @@ describe('runCommand - Options (Flags)', () => {
 			expect(error).toBeInstanceOf(CLIError)
 			expect(error.type).toBe(ErrorTypes.INVALID_ARGUMENT)
 			expect(error.message).toContain('Invalid value for --limit')
+		}
+	})
+
+	test('throws error for missing required option', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				email: {
+					type: 'string',
+					description: 'Email address',
+					required: true
+				}
+			},
+			handler: async () => {}
+		}
+
+		try {
+			await runCommand(command, [])
+			expect(true).toBe(false) // should not reach
+		} catch (error) {
+			expect(error).toBeInstanceOf(CLIError)
+			expect(error.type).toBe(ErrorTypes.MISSING_ARGUMENT)
+			expect(error.message).toContain('Missing required option: --email')
+		}
+	})
+
+	test('accepts required option when provided', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				email: {
+					type: 'string',
+					description: 'Email address',
+					required: true
+				}
+			},
+			handler: async ({flags}) => flags
+		}
+
+		const result = await runCommand(command, ['--email', 'test@example.com'])
+		expect(result).toEqual({email: 'test@example.com'})
+	})
+
+	test('throws error for missing required boolean option', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				confirm: {
+					type: 'boolean',
+					description: 'Confirm action',
+					required: true
+				}
+			},
+			handler: async () => {}
+		}
+
+		try {
+			await runCommand(command, [])
+			expect(true).toBe(false) // should not reach
+		} catch (error) {
+			expect(error).toBeInstanceOf(CLIError)
+			expect(error.type).toBe(ErrorTypes.MISSING_ARGUMENT)
+			expect(error.message).toContain('Missing required option: --confirm')
+		}
+	})
+
+	test('accepts required boolean option when provided', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				confirm: {
+					type: 'boolean',
+					description: 'Confirm action',
+					required: true
+				}
+			},
+			handler: async ({flags}) => flags
+		}
+
+		const result = await runCommand(command, ['--confirm'])
+		expect(result).toEqual({confirm: true})
+	})
+
+	test('required option takes precedence over default', async () => {
+		// If an option is both required and has a default,
+		// the required validation should still trigger
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				format: {
+					type: 'string',
+					description: 'Output format',
+					required: true,
+					default: 'json'
+				}
+			},
+			handler: async () => {}
+		}
+
+		try {
+			await runCommand(command, [])
+			expect(true).toBe(false) // should not reach
+		} catch (error) {
+			expect(error).toBeInstanceOf(CLIError)
+			expect(error.type).toBe(ErrorTypes.MISSING_ARGUMENT)
 		}
 	})
 })

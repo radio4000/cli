@@ -69,10 +69,18 @@ describe('OptionSchema', () => {
 	test('rejects invalid type', () => {
 		expect(() =>
 			OptionSchema.parse({
-				type: 'number',
+				type: 'array',
 				description: 'Invalid type'
 			})
 		).toThrow()
+	})
+
+	test('accepts number type', () => {
+		const option = {
+			type: 'number',
+			description: 'Numeric value'
+		}
+		expect(() => OptionSchema.parse(option)).not.toThrow()
 	})
 
 	test('rejects invalid short flag (multiple chars)', () => {

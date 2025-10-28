@@ -154,10 +154,44 @@ COMMANDS
               Download all tracks from a channel using yt-dlp.
               Works with both v1 and v2 channels (read-only operation).
 
+KNOWN ISSUES
+       Piping `r4 channel list` to jq fails with "Unfinished JSON term at EOF"
+       - JSON appears truncated when piped directly
+       - Workaround: redirect to file first, then process
+       - Likely a buffering/streaming issue with large outputs
+
+       Help flags don't work on subcommands
+       - `r4 channel view --help` errors instead of showing help
+       - Only shows error: "Missing required argument: slug"
+
+       Stderr messages mix with JSON output
+       - "API unavailable, using bundled v1 data" goes to stderr
+       - Can interfere with piping workflows
+       - Consider --quiet flag or better separation
+
 BACKLOG
+       High Priority:
+       - Fix `channel list` piping issue (critical for Unix workflows)
+       - Add --help/-h flag support to all commands/subcommands
+       - Add --quiet/-q flag to suppress stderr messages
+       - Add --format flag: json (default), csv, table, tsv
+
+       Medium Priority:
+       - Add filtering flags: --limit, --offset, --sort, --filter
+       - Add --output/-o flag to save directly to file
+       - Add progress indicators for long operations
+       - Add --pretty/--compact JSON formatting options
+       - Consider adding `channels` alias for `channel list`
+
        Search operations (or use: r4 track list --sql | rg <pattern>)
-       r4 track search <query>
-       r4 channel search <query>
+       - r4 track search <query>
+       - r4 channel search <query>
+
+       Nice to Have:
+       - Color output option for better readability
+       - Interactive mode for browsing
+       - Bulk operations improvements
+       - Stats/summary commands
 
        Download improvements:
        - Add concurrency control (p-limit) for batch downloads

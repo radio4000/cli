@@ -15,15 +15,23 @@ export default {
 		}
 	},
 
-	handler: async ({flags}) => ({
-		data: await listChannels({limit: flags.limit}),
-		format: flags.sql ? 'sql' : 'json',
-		formatOptions: flags.sql ? {table: 'channels'} : undefined
-	}),
+	handler: async ({flags}) => {
+		// Require --limit to prevent accidentally fetching all channels
+		if (!flags.limit) {
+			throw new Error(
+				'--limit is required (0-4000)\nExample: r4 channel list --limit 10'
+			)
+		}
+
+		return {
+			data: await listChannels({limit: flags.limit}),
+			format: flags.sql ? 'sql' : 'json',
+			formatOptions: flags.sql ? {table: 'channels'} : undefined
+		}
+	},
 
 	examples: [
-		'r4 channel list',
 		'r4 channel list --limit 10',
-		'r4 channel list --sql'
+		'r4 channel list --limit 100 --sql'
 	]
 }
