@@ -24,14 +24,14 @@ if (!slug || !destinationPath) return args.showHelp()
 slug = path.basename(slug)
 destinationPath = path.normalize(destinationPath)
 
-const main = async function() {
+const main = async () => {
 	const {
 		debug: showDebug
 	} = flags
 
 	try {
 		await commandExists('rsync')
-	} catch (error) {
+	} catch {
 		console.error('You need to install rsync')
 		return
 	}
