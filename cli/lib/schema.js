@@ -28,7 +28,7 @@ export const trackSchema = z.preprocess(
 		slug: z.string(), // channel slug
 		title: z.string().min(1).max(500),
 		url: z.string().url(),
-		description: z.string().default(''),
+		description: z.string().nullish().default(''),
 		discogs_url: z.string().url().nullish(),
 		tags: z.array(z.string()).default([]),
 		created_at: z.iso.datetime({offset: true}).optional(),

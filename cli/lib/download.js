@@ -95,6 +95,7 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 	// Ensure folder exists
 	if (!dryRun) {
 		await mkdir(folderPath, {recursive: true})
+		await mkdir(`${folderPath}/tracks`, {recursive: true})
 	}
 
 	// Pipeline: Prepare
@@ -145,7 +146,7 @@ export async function downloadTrack(track, folderPath, {debug = false} = {}) {
 		`--format=bestaudio[ext=${extension}]/best[ext=mp4]/best`,
 		'--embed-metadata',
 		'--no-playlist',
-		`--paths=${folderPath}`,
+		`--paths=${folderPath}/tracks`,
 		`--output=${filename}.%(ext)s`,
 		track.url
 	]
@@ -494,9 +495,10 @@ export function toExtension(track) {
 /**
  * Create full filepath for track
  * Combines folder, filename, and extension
+ * Places tracks in a 'tracks/' subfolder
  */
 export function toFilepath(track, folderPath) {
 	const filename = toFilename(track)
 	const extension = toExtension(track)
-	return `${folderPath}/${filename}.${extension}`
+	return `${folderPath}/tracks/${filename}.${extension}`
 }

@@ -215,7 +215,7 @@ export async function listTracks(options = {}) {
 			invalidTracks.forEach((t) => {
 				console.error(`  "${t.title}"`)
 				console.error(`    URL: ${t.url}`)
-				console.error(`    Reason: Invalid URL format`)
+				console.error(`    Reason: ${t.error}`)
 				console.error(`    Fix: r4 track edit ${t.id}`)
 			})
 		}
