@@ -1,4 +1,6 @@
 import {deleteChannel} from '../../lib/data.js'
+import {toArray, singleOrMultiple} from '../../lib/command-helpers.js'
+import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Delete one or more channels',
@@ -18,19 +20,15 @@ export default {
 			description: 'Confirm deletion (required for safety)',
 			required: true
 		},
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
-		}
+		...sqlOption
 	},
 
 	handler: async (input) => {
-		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
+		const slugs = toArray(input.slug)
 		const results = await Promise.all(slugs.map((slug) => deleteChannel(slug)))
 
 		return {
-			data: results.length === 1 ? results[0] : results,
+			data: singleOrMultiple(results),
 			format: input.sql ? 'sql' : 'json',
 			formatOptions: input.sql ? {table: 'channels'} : undefined
 		}

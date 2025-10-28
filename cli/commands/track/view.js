@@ -1,4 +1,6 @@
 import {getTrack} from '../../lib/data.js'
+import {toArray, singleOrMultiple} from '../../lib/command-helpers.js'
+import {formatOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'View detailed information about one or more tracks',
@@ -12,27 +14,15 @@ export default {
 		}
 	],
 
-	options: {
-		format: {
-			type: 'string',
-			description: 'Output format: text, json, or sql',
-			default: 'json',
-			parse: (val) => {
-				if (!['json', 'sql', 'text'].includes(val)) {
-					throw new Error('must be json, sql, or text')
-				}
-				return val
-			}
-		}
-	},
+	options: formatOption,
 
 	handler: async (input) => {
-		const ids = Array.isArray(input.id) ? input.id : [input.id]
+		const ids = toArray(input.id)
 		const tracks = await Promise.all(ids.map((id) => getTrack(id)))
 		const format = input.format || 'json'
 
 		return {
-			data: tracks.length === 1 ? tracks[0] : tracks,
+			data: singleOrMultiple(tracks),
 			format: format,
 			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
 		}

@@ -1,4 +1,5 @@
 import {listTracks} from '../../lib/data.js'
+import {formatOption} from '../../lib/common-options.js'
 
 function formatTrackSummary(tracks, limit) {
 	const totalCount = tracks.length
@@ -48,8 +49,7 @@ export default {
 			description: 'Limit number of results'
 		},
 		format: {
-			type: 'string',
-			description: 'Output format: text, json, or sql',
+			...formatOption.format,
 			default: 'text'
 		}
 	},

@@ -1,4 +1,6 @@
 import {deleteTrack} from '../../lib/data.js'
+import {toArray, singleOrMultiple} from '../../lib/command-helpers.js'
+import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Delete one or more tracks',
@@ -12,20 +14,14 @@ export default {
 		}
 	],
 
-	options: {
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
-		}
-	},
+	options: sqlOption,
 
 	handler: async (input) => {
-		const ids = Array.isArray(input.id) ? input.id : [input.id]
+		const ids = toArray(input.id)
 		const results = await Promise.all(ids.map((id) => deleteTrack(id)))
 
 		return {
-			data: results.length === 1 ? results[0] : results,
+			data: singleOrMultiple(results),
 			format: input.sql ? 'sql' : 'json',
 			formatOptions: input.sql ? {table: 'tracks'} : undefined
 		}

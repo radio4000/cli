@@ -1,4 +1,6 @@
 import {getChannel} from '../../lib/data.js'
+import {toArray, singleOrMultiple} from '../../lib/command-helpers.js'
+import {formatOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'View detailed information about one or more channels',
@@ -12,27 +14,15 @@ export default {
 		}
 	],
 
-	options: {
-		format: {
-			type: 'string',
-			description: 'Output format: text, json, or sql',
-			default: 'json',
-			parse: (val) => {
-				if (!['json', 'sql', 'text'].includes(val)) {
-					throw new Error('must be json, sql, or text')
-				}
-				return val
-			}
-		}
-	},
+	options: formatOption,
 
 	handler: async (input) => {
-		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
+		const slugs = toArray(input.slug)
 		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
 		const format = input.format || 'json'
 
 		return {
-			data: channels.length === 1 ? channels[0] : channels,
+			data: singleOrMultiple(channels),
 			format: format,
 			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
 		}

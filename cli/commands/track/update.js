@@ -1,4 +1,6 @@
 import {updateTrack} from '../../lib/data.js'
+import {toArray, singleOrMultiple, requireUpdates} from '../../lib/command-helpers.js'
+import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Update one or more tracks',
@@ -21,28 +23,22 @@ export default {
 			type: 'string',
 			description: 'New track URL'
 		},
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
-		}
+		...sqlOption
 	},
 
 	handler: async (input) => {
-		const ids = Array.isArray(input.id) ? input.id : [input.id]
+		const ids = toArray(input.id)
 
 		const updates = {}
 		if (input.title) updates.title = input.title
 		if (input.url) updates.url = input.url
 
-		if (Object.keys(updates).length === 0) {
-			throw new Error('At least one field must be provided for update')
-		}
+		requireUpdates(updates)
 
 		const tracks = await Promise.all(ids.map((id) => updateTrack(id, updates)))
 
 		return {
-			data: tracks.length === 1 ? tracks[0] : tracks,
+			data: singleOrMultiple(tracks),
 			format: input.sql ? 'sql' : 'json',
 			formatOptions: input.sql ? {table: 'tracks'} : undefined
 		}

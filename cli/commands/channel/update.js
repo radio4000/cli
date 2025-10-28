@@ -1,4 +1,6 @@
 import {updateChannel} from '../../lib/data.js'
+import {toArray, singleOrMultiple, requireUpdates} from '../../lib/command-helpers.js'
+import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Update one or more channels',
@@ -25,31 +27,25 @@ export default {
 			type: 'string',
 			description: 'New channel image URL'
 		},
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
-		}
+		...sqlOption
 	},
 
 	handler: async (input) => {
-		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
+		const slugs = toArray(input.slug)
 
 		const updates = {}
 		if (input.name) updates.name = input.name
 		if (input.description !== undefined) updates.description = input.description
 		if (input.image !== undefined) updates.image = input.image
 
-		if (Object.keys(updates).length === 0) {
-			throw new Error('At least one field must be provided for update')
-		}
+		requireUpdates(updates)
 
 		const channels = await Promise.all(
 			slugs.map((slug) => updateChannel(slug, updates))
 		)
 
 		return {
-			data: channels.length === 1 ? channels[0] : channels,
+			data: singleOrMultiple(channels),
 			format: input.sql ? 'sql' : 'json',
 			formatOptions: input.sql ? {table: 'channels'} : undefined
 		}

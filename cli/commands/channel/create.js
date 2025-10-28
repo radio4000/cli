@@ -1,5 +1,6 @@
 import {createChannel} from '../../lib/data.js'
 import {channelSchema} from '../../lib/schema.js'
+import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Create a new channel',
@@ -29,11 +30,7 @@ export default {
 			description: 'Channel image URL',
 			default: ''
 		},
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
-		}
+		...sqlOption
 	},
 
 	validate: channelSchema

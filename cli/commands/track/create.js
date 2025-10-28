@@ -1,5 +1,6 @@
 import {z} from 'zod'
 import {createTrack} from '../../lib/data.js'
+import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Create a new track',
@@ -20,11 +21,7 @@ export default {
 			description: 'Track URL',
 			required: true
 		},
-		sql: {
-			type: 'boolean',
-			description: 'Output as SQL statements',
-			default: false
-		}
+		...sqlOption
 	},
 
 	validate: z.object({

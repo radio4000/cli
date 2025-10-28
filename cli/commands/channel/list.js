@@ -1,4 +1,5 @@
 import {listChannels} from '../../lib/data.js'
+import {formatOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'List all channels (from v2 API or bundled v1 data)',
@@ -9,11 +10,7 @@ export default {
 			description: 'Limit number of results (default: 100)',
 			default: 100
 		},
-		format: {
-			type: 'string',
-			description: 'Output format: text, json, or sql',
-			default: 'json'
-		}
+		...formatOption
 	},
 
 	handler: async (input) => {
