@@ -2,49 +2,36 @@ import {mkdir, readFile, writeFile} from 'node:fs/promises'
 import {homedir} from 'node:os'
 import {join} from 'node:path'
 
-const CONFIG_DIR = join(homedir(), '.config', 'radio4000')
-const CONFIG_FILE = join(CONFIG_DIR, 'config.json')
+const configPath = join(homedir(), '.config', 'radio4000', 'config.json')
 
-/**
- * Default config structure
- */
-const DEFAULT_CONFIG = {
-	auth: {
-		session: null
-	}
+const defaults = {
+	auth: {session: null}
 }
 
-/**
- * Load config from disk
- */
-export async function loadConfig() {
+/** Load config from disk, return defaults if missing */
+export async function load() {
 	try {
-		const content = await readFile(CONFIG_FILE, 'utf-8')
-		return {...DEFAULT_CONFIG, ...JSON.parse(content)}
+		const data = await readFile(configPath, 'utf-8')
+		return {...defaults, ...JSON.parse(data)}
 	} catch {
-		return DEFAULT_CONFIG
+		return defaults
 	}
 }
 
-/**
- * Save config to disk
- */
-export async function saveConfig(config) {
-	await mkdir(CONFIG_DIR, {recursive: true})
-	await writeFile(CONFIG_FILE, JSON.stringify(config, null, 2))
+/** Save config to disk */
+export async function save(config) {
+	await mkdir(join(configPath, '..'), {recursive: true})
+	await writeFile(configPath, JSON.stringify(config, null, 2))
 	return config
 }
 
-/**
- * Update config (partial update)
- */
-export async function updateConfig(updates) {
-	const config = await loadConfig()
-	const updated = {
+/** Update config with partial changes (deep merges auth) */
+export async function update(changes) {
+	const config = await load()
+	const merged = {
 		...config,
-		...updates,
-		// Deep merge for auth object only
-		auth: updates.auth ? {...config.auth, ...updates.auth} : config.auth
+		...changes,
+		auth: changes.auth ? {...config.auth, ...changes.auth} : config.auth
 	}
-	return saveConfig(updated)
+	return save(merged)
 }

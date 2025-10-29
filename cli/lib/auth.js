@@ -1,5 +1,5 @@
 import {sdk} from '@radio4000/sdk'
-import {loadConfig, updateConfig} from './config.js'
+import * as config from './config.js'
 
 /**
  * Save authentication session to config
@@ -16,7 +16,7 @@ export async function saveSession(session) {
 		created_at: new Date().toISOString()
 	}
 
-	await updateConfig({
+	await config.update({
 		auth: {
 			session: sessionData
 		}
@@ -29,15 +29,15 @@ export async function saveSession(session) {
  * Load authentication session from config
  */
 export async function loadSession() {
-	const config = await loadConfig()
-	return config.auth?.session || null
+	const data = await config.load()
+	return data.auth?.session || null
 }
 
 /**
  * Clear saved authentication session
  */
 export async function clearSession() {
-	await updateConfig({
+	await config.update({
 		auth: {
 			session: null
 		}
