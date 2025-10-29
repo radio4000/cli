@@ -1,5 +1,5 @@
-import {listChannels} from '../../lib/data.js'
 import {formatOption} from '../../lib/common-options.js'
+import {listChannels} from '../../lib/data.js'
 
 export default {
 	description: 'List all channels (from v2 API or bundled v1 data)',

@@ -1,6 +1,10 @@
-import {updateTrack} from '../../lib/data.js'
-import {toArray, singleOrMultiple, requireUpdates} from '../../lib/command-helpers.js'
+import {
+	requireUpdates,
+	singleOrMultiple,
+	toArray
+} from '../../lib/command-helpers.js'
 import {sqlOption} from '../../lib/common-options.js'
+import {updateTrack} from '../../lib/data.js'
 
 export default {
 	description: 'Update one or more tracks',

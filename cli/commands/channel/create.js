@@ -1,6 +1,6 @@
+import {sqlOption} from '../../lib/common-options.js'
 import {createChannel} from '../../lib/data.js'
 import {channelSchema} from '../../lib/schema.js'
-import {sqlOption} from '../../lib/common-options.js'
 
 export default {
 	description: 'Create a new channel',

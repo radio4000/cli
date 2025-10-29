@@ -32,6 +32,11 @@ export default {
 			description: 'Re-download existing files',
 			default: false
 		},
+		'retry-failed': {
+			type: 'boolean',
+			description: 'Retry tracks that previously failed (default: skip them)',
+			default: false
+		},
 		'dry-run': {
 			type: 'boolean',
 			description: 'Show what would be downloaded without downloading',
@@ -89,6 +94,7 @@ export default {
 		// Download
 		const result = await downloadChannel(tracks, folderPath, {
 			force: input.force,
+			retryFailed: input['retry-failed'],
 			dryRun,
 			verbose,
 			writeMetadata: !noMetadata,
@@ -103,21 +109,22 @@ export default {
 			console.log(`  Downloaded: ${result.downloaded}`)
 			console.log(`  Already exists: ${result.existing}`)
 			console.log(`  Unavailable: ${result.unavailable}`)
+			if (result.previouslyFailed > 0) {
+				console.log(`  Previously failed (skipped): ${result.previouslyFailed}`)
+			}
 			console.log(`  Failed: ${result.failed}`)
 
 			if (result.failures.length > 0) {
 				console.log()
-				console.log('Failures:')
-				for (const failure of result.failures) {
-					console.log(`  ${failure.track.title}`)
-					console.log(`    ${failure.error}`)
-				}
+				console.log(`⚠ ${result.failed} tracks failed to download`)
+				console.log(`  See: ${folderPath}/failures.jsonl`)
 			}
 		}
 
+		// Don't return data - all output already printed above
 		return {
-			data: result,
-			format: 'json'
+			data: '',
+			format: 'text'
 		}
 	},
 
@@ -127,6 +134,7 @@ export default {
 		'r4 download ko002 --output ./my-music',
 		'r4 download ko002 --dry-run',
 		'r4 download ko002 --force',
+		'r4 download ko002 --retry-failed',
 		'r4 download ko002 --no-metadata',
 		'r4 download ko002 --concurrency 5'
 	]

@@ -1,12 +1,12 @@
 import {spawn} from 'node:child_process'
-import {existsSync} from 'node:fs'
-import {mkdir, utimes, writeFile} from 'node:fs/promises'
+import {existsSync, readFileSync} from 'node:fs'
+import {appendFile, mkdir, utimes, writeFile} from 'node:fs/promises'
 import ffmetadata from 'ffmetadata'
 import filenamify from 'filenamify'
 import getArtistTitle from 'get-artist-title'
 import pLimit from '../../lib/p-limit-custom.js'
-import {formatTrackText} from '../commands/track/list.js'
 import {formatChannelText} from '../commands/channel/view.js'
+import {formatTrackText} from '../commands/track/list.js'
 
 /**
  * Download pipeline for Radio4000 tracks
@@ -16,6 +16,41 @@ import {formatChannelText} from '../commands/channel/view.js'
 // ============================================================================
 // Pipeline: Prepare → Filter → Download → Report
 // ============================================================================
+
+/**
+ * Read failed track IDs from failures.jsonl
+ * Returns a Set of track IDs that previously failed to download
+ */
+export function readFailedTrackIds(folderPath) {
+	const filepath = `${folderPath}/failures.jsonl`
+
+	if (!existsSync(filepath)) {
+		return new Set()
+	}
+
+	try {
+		const content = readFileSync(filepath, 'utf-8').trim()
+		if (!content) {
+			return new Set()
+		}
+
+		const lines = content.split('\n')
+		const ids = lines
+			.map((line) => {
+				try {
+					const failure = JSON.parse(line)
+					return failure.track?.id
+				} catch {
+					return null
+				}
+			})
+			.filter(Boolean)
+
+		return new Set(ids)
+	} catch {
+		return new Set()
+	}
+}
 
 /**
  * Prepare tracks with filesystem metadata
@@ -34,14 +69,20 @@ export function prepareTracks(tracks, folderPath) {
  * Filter tracks into download pipeline stages
  * Returns categorized track lists for reporting and processing
  */
-export function filterTracks(tracks, {force = false} = {}) {
+export function filterTracks(
+	tracks,
+	{force = false, failedIds = new Set()} = {}
+) {
 	const unavailable = tracks.filter((t) => t.mediaNotAvailable)
 	const existing = tracks.filter((t) => t.fileExists)
+	const previouslyFailed = tracks.filter((t) => failedIds.has(t.id))
 	const toDownload = force
 		? tracks
-		: tracks.filter((t) => !t.mediaNotAvailable && !t.fileExists)
+		: tracks.filter(
+				(t) => !t.mediaNotAvailable && !t.fileExists && !failedIds.has(t.id)
+			)
 
-	return {unavailable, existing, toDownload}
+	return {unavailable, existing, previouslyFailed, toDownload}
 }
 
 /**
@@ -49,7 +90,12 @@ export function filterTracks(tracks, {force = false} = {}) {
  * Returns summary of successes and failures
  */
 export async function downloadBatch(tracks, folderPath, options = {}) {
-	const {dryRun = false, verbose = false, writeMetadata = true, concurrency = 3} = options
+	const {
+		dryRun = false,
+		verbose = false,
+		writeMetadata = true,
+		concurrency = 3
+	} = options
 	const successes = []
 	const failures = []
 
@@ -76,7 +122,6 @@ export async function downloadBatch(tracks, folderPath, options = {}) {
 
 	// Parallel processing for actual downloads
 	const limit = pLimit(clampedConcurrency)
-	let completed = 0
 
 	const downloadPromises = tracks.map((track, index) =>
 		limit(async () => {
@@ -96,14 +141,17 @@ export async function downloadBatch(tracks, folderPath, options = {}) {
 				const txtFilepath = track.filepath.replace(/\.[^.]+$/, '.txt')
 				await setFileTimestamps(txtFilepath, track, {verbose})
 
-				completed++
 				console.log(progress, 'Downloaded:', track.filepath)
 				successes.push(track)
 			} catch (error) {
-				completed++
 				console.error(progress, 'Failed:', track.title)
 				verbose && console.error(error.message)
-				failures.push({track, error: error.message})
+
+				const failure = {track, error: error.message}
+				failures.push(failure)
+
+				// Write failure immediately to JSONL file
+				await writeFailures([failure], folderPath, {verbose})
 			}
 		})
 	)
@@ -118,7 +166,13 @@ export async function downloadBatch(tracks, folderPath, options = {}) {
  * Orchestrates: prepare → filter → download → report
  */
 export async function downloadChannel(tracks, folderPath, options = {}) {
-	const {force = false, dryRun = false, verbose = false, concurrency = 3} = options
+	const {
+		force = false,
+		dryRun = false,
+		verbose = false,
+		concurrency = 3,
+		retryFailed = false
+	} = options
 
 	// Ensure folder exists
 	if (!dryRun) {
@@ -129,8 +183,14 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 	// Pipeline: Prepare
 	const prepared = prepareTracks(tracks, folderPath)
 
+	// Read previously failed track IDs (unless retrying)
+	const failedIds = retryFailed ? new Set() : readFailedTrackIds(folderPath)
+
 	// Pipeline: Filter
-	const {unavailable, existing, toDownload} = filterTracks(prepared, {force})
+	const {unavailable, existing, previouslyFailed, toDownload} = filterTracks(
+		prepared,
+		{force, failedIds}
+	)
 
 	// Report what we found
 	if (dryRun) {
@@ -140,6 +200,9 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 		console.log('Total tracks:', tracks.length)
 		console.log('  Unavailable:', unavailable.length)
 		console.log('  Already exists:', existing.length)
+		if (previouslyFailed.length > 0) {
+			console.log('  Previously failed:', previouslyFailed.length)
+		}
 		console.log('  To download:', toDownload.length)
 		console.log('  Concurrency:', Math.max(1, Math.min(10, concurrency)))
 		console.log()
@@ -158,6 +221,7 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 		total: tracks.length,
 		unavailable: unavailable.length,
 		existing: existing.length,
+		previouslyFailed: previouslyFailed.length,
 		downloaded: successes.length,
 		failed: failures.length,
 		failures
@@ -300,7 +364,11 @@ export async function writeTrackMetadataFile(track, {verbose = false} = {}) {
  * Set file timestamps to match track dates
  * Sets mtime to updated_at and atime to created_at
  */
-export async function setFileTimestamps(filepath, track, {verbose = false} = {}) {
+export async function setFileTimestamps(
+	filepath,
+	track,
+	{verbose = false} = {}
+) {
 	if (!existsSync(filepath)) {
 		throw new Error(`File not found: ${filepath}`)
 	}
@@ -409,6 +477,46 @@ export async function writeTracksPlaylist(
 
 	if (verbose) {
 		console.log('Wrote tracks.m3u:', filepath)
+	}
+
+	return filepath
+}
+
+/**
+ * Write failures to failures.jsonl file
+ * Each line is a JSON object with track and error info
+ * JSONL format allows easy appending without parsing the whole file
+ */
+export async function writeFailures(
+	failures,
+	folderPath,
+	{verbose = false} = {}
+) {
+	if (failures.length === 0) {
+		return null
+	}
+
+	const filepath = `${folderPath}/failures.jsonl`
+	const timestamp = new Date().toISOString()
+
+	// Write each failure as a separate line
+	for (const failure of failures) {
+		const line = JSON.stringify({
+			timestamp,
+			track: {
+				id: failure.track.id,
+				title: failure.track.title,
+				url: failure.track.url,
+				youtubeId: extractYouTubeId(failure.track.url)
+			},
+			error: failure.error
+		})
+
+		await appendFile(filepath, `${line}\n`, 'utf-8')
+	}
+
+	if (verbose) {
+		console.log(`Wrote ${failures.length} failures to:`, filepath)
 	}
 
 	return filepath

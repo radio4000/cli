@@ -1,6 +1,6 @@
 import {z} from 'zod'
-import {createTrack} from '../../lib/data.js'
 import {sqlOption} from '../../lib/common-options.js'
+import {createTrack} from '../../lib/data.js'
 
 export default {
 	description: 'Create a new track',

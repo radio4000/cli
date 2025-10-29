@@ -1,6 +1,6 @@
-import {deleteChannel} from '../../lib/data.js'
-import {toArray, singleOrMultiple} from '../../lib/command-helpers.js'
+import {singleOrMultiple, toArray} from '../../lib/command-helpers.js'
 import {sqlOption} from '../../lib/common-options.js'
+import {deleteChannel} from '../../lib/data.js'
 
 export default {
 	description: 'Delete one or more channels',

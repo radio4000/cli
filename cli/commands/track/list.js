@@ -1,5 +1,5 @@
-import {listTracks} from '../../lib/data.js'
 import {formatOption} from '../../lib/common-options.js'
+import {listTracks} from '../../lib/data.js'
 
 /**
  * Format a single track as text (title + URL)
@@ -15,8 +15,6 @@ function formatTrackSummary(tracks, limit) {
 	const displayTracks = tracks.slice(0, displayLimit)
 
 	const lines = []
-	lines.push(`Found ${totalCount} track${totalCount !== 1 ? 's' : ''}`)
-	lines.push('')
 
 	if (totalCount > 0) {
 		const showing = Math.min(displayLimit, totalCount)

@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test'
 import {readFile} from 'node:fs/promises'
-import {resolve, dirname} from 'node:path'
+import {dirname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {trackSchema} from './schema.js'
 
@@ -38,7 +38,9 @@ describe('trackSchema validation against v1 data', () => {
 		})
 
 		if (errors.length > 0) {
-			console.log(`\nFound ${errors.length} validation errors in first 1000 tracks:`)
+			console.log(
+				`\nFound ${errors.length} validation errors in first 1000 tracks:`
+			)
 			errors.slice(0, 10).forEach(({index, track, error}) => {
 				console.log(`\nTrack ${index}: ${track.title || '(empty title)'}`)
 				console.log(`  Error:`, JSON.stringify(error, null, 2))
@@ -75,7 +77,9 @@ describe('trackSchema validation against v1 data', () => {
 		})
 
 		console.log(`\nTotal tracks: ${tracks.length}`)
-		console.log(`Invalid tracks: ${errors.length} (${((errors.length / tracks.length) * 100).toFixed(3)}%)`)
+		console.log(
+			`Invalid tracks: ${errors.length} (${((errors.length / tracks.length) * 100).toFixed(3)}%)`
+		)
 
 		if (errors.length > 0) {
 			console.log(`\nValidation errors by field:`)
