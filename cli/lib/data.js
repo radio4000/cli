@@ -180,10 +180,32 @@ export async function listTracks(options = {}) {
 		)
 	}
 
-	// Always load v1 tracks
+	// Always load v1 tracks and channels for validation
 	const v1Tracks = await loadV1Tracks()
+	const v1Channels = await loadV1Channels()
+
+	// Validate that all channels exist (in v1 or v2)
+	const v1Slugs = new Set(v1Channels.map((ch) => ch.slug))
 
 	try {
+		// Try to get v2 channels to validate existence
+		const {data: v2Data} = await sdk.channels.readChannels()
+		const v2Slugs = new Set(v2Data?.map((ch) => ch.slug) || [])
+
+		// Check for nonexistent channels
+		const nonexistent = channelSlugs.filter(
+			(slug) => !v1Slugs.has(slug) && !v2Slugs.has(slug)
+		)
+
+		if (nonexistent.length > 0) {
+			const error = new Error(
+				`Channel${nonexistent.length > 1 ? 's' : ''} not found: ${nonexistent.join(', ')}`
+			)
+			error.code = 'CHANNEL_NOT_FOUND'
+			error.statusCode = 404
+			throw error
+		}
+
 		// Fetch v2 tracks for specified channels
 		const rawTracks = (
 			await Promise.all(channelSlugs.map(fetchChannelTracks))
@@ -228,7 +250,24 @@ export async function listTracks(options = {}) {
 		const filtered = combined.filter((tr) => channelSlugs.includes(tr.slug))
 
 		return limitTo(filtered)
-	} catch (_error) {
+	} catch (error) {
+		// Re-throw validation errors
+		if (error.code === 'CHANNEL_NOT_FOUND') {
+			throw error
+		}
+
+		// For other errors, fall back to v1 but still validate channels exist
+		const nonexistent = channelSlugs.filter((slug) => !v1Slugs.has(slug))
+
+		if (nonexistent.length > 0) {
+			const notFoundError = new Error(
+				`Channel${nonexistent.length > 1 ? 's' : ''} not found: ${nonexistent.join(', ')}`
+			)
+			notFoundError.code = 'CHANNEL_NOT_FOUND'
+			notFoundError.statusCode = 404
+			throw notFoundError
+		}
+
 		// Silent fallback to v1 - this is expected during migration
 		const filtered = v1Tracks.filter((tr) => channelSlugs.includes(tr.slug))
 

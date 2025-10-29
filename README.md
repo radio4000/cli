@@ -28,8 +28,8 @@ Authenticate with Radio4000 using email OTP
 
 **Examples:**
 ```bash
-r4 auth login
-r4 auth login --email "you@example.com"
+r4 auth login                              # Interactive prompt
+r4 auth login --email "you@example.com"    # Skip email prompt
 ```
 
 ### auth logout
@@ -55,11 +55,10 @@ List channels (from Radio4000 db including v1 data)
 
 **Examples:**
 ```bash
-r4 channel list
-r4 channel list --limit 10
-r4 channel list --limit 100 --format sql
-r4 channel list --format json
-r4 channel list ko002 --format text
+r4 channel list                   # All channels, JSON output
+r4 channel list --limit 10        # First ten only
+r4 channel list --format text     # Human-readable
+r4 channel list --format sql      # SQL INSERT statements
 ```
 
 ### channel view
@@ -75,10 +74,9 @@ View detailed information about one or more channels
 
 **Examples:**
 ```bash
-r4 channel view ko002
-r4 channel view ko002 oskar
-r4 channel view ko002 --format sql
-r4 channel view ko002 --format json
+r4 channel view ko002              # Single channel
+r4 channel view ko002 oskar        # Multiple channels
+r4 channel view ko002 --format text  # Human-readable
 ```
 
 ### channel create
@@ -98,7 +96,7 @@ Create a new channel
 **Examples:**
 ```bash
 r4 channel create mysounds --name "My Sounds"
-r4 channel create mysounds --name "My Sounds" --description "A collection"
+r4 channel create mysounds --name "My Sounds" --description "A collection of sounds"
 ```
 
 ### channel update
@@ -125,11 +123,10 @@ List tracks for specified channel(s)
 
 **Examples:**
 ```bash
-r4 track list --channel ko002
-r4 track list --channel ko002 --limit 20
-r4 track list --channel ko002 --format json
-r4 track list --channel ko002 --format sql
-r4 track list --channel ko002 --channel oskar
+r4 track list --channel ko002                        # All tracks from one channel
+r4 track list --channel ko002 --limit 20             # First 20 only
+r4 track list --channel ko002 --channel oskar        # Multiple channels
+r4 track list --channel ko002 --format sql           # SQL INSERT statements
 ```
 
 ### track view
@@ -145,10 +142,9 @@ View detailed information about one or more tracks
 
 **Examples:**
 ```bash
-r4 track view abc123
-r4 track view abc123 def456
-r4 track view abc123 --format sql
-r4 track view abc123 --format json
+r4 track view abc123              # Single track
+r4 track view abc123 def456       # Multiple tracks
+r4 track view abc123 --format text  # Human-readable
 ```
 
 ### track create
@@ -165,7 +161,7 @@ Create a new track
 **Examples:**
 ```bash
 r4 track create --channel mysounds --title "Song Name" --url "https://youtube.com/..."
-echo '{"title":"Song","url":"..."}' | r4 track create --channel mysounds
+echo '{"title":"Song","url":"..."}' | r4 track create --channel mysounds  # Via stdin
 ```
 
 ### track update
@@ -197,12 +193,11 @@ Download all tracks from a channel
 
 **Examples:**
 ```bash
-r4 download ko002
-r4 download ko002 --limit 10
-r4 download ko002 --output ./my-music
-r4 download ko002 --dry-run
-r4 download ko002 --force
-r4 download ko002 --no-metadata
+r4 download ko002                         # Download to ./downloads/ko002
+r4 download ko002 --limit 10              # First 10 tracks only
+r4 download ko002 --output ./my-music     # Custom location
+r4 download ko002 --dry-run               # Preview without downloading
+r4 download ko002 --force                 # Re-download existing files
 ```
 
 ## db - Database Operations
@@ -219,10 +214,10 @@ Output SQL CREATE TABLE statements for channels and tracks
 
 **Examples:**
 ```bash
-r4 db schema
-r4 db schema --channels
-r4 db schema --tracks
-r4 db schema | sqlite3 my.db
+r4 db schema                      # Both tables
+r4 db schema --channels           # Channels only
+r4 db schema --tracks             # Tracks only
+r4 db schema | sqlite3 my.db      # Create database
 ```
 
 ## search - Search
@@ -242,11 +237,11 @@ Search channels and tracks
 
 **Examples:**
 ```bash
-r4 search ambient
-r4 search ambient --channels
-r4 search ko002 --channels --limit 5
-r4 search "electronic music" --tracks
-r4 search ambient --json
+r4 search ambient                          # Search both channels and tracks
+r4 search ambient --channels               # Channels only
+r4 search "electronic music" --tracks      # Tracks only
+r4 search ambient --limit 5                # Limit results per category
+r4 search ambient --json                   # JSON output
 ```
 
 # DATA SOURCES
@@ -280,10 +275,10 @@ r4 outputs JSON by default, making it easy to pipe to other tools:
 
 ```bash
 # Extract specific fields with jq
-r4 track list --channel foo --format json | jq '.[] | .title'
 r4 channel list --limit 10 | jq '.[].slug'
+r4 track list --channel ko002 | jq '.[] | .title'
 
-# Export to SQLite database (2 commands, boom!)
+# Export to SQLite database (two commands, done)
 r4 db schema | sqlite3 my.db
 r4 track list --channel ko002 --format sql | sqlite3 my.db
 
@@ -296,7 +291,7 @@ echo '{"title":"Song","url":"..."}' | r4 track create --channel mysounds
 
 # Convert between formats
 r4 channel view ko002 --format json | jq '.name'
-r4 channel view ko002 --format text  # human-readable output
+r4 channel view ko002 --format text
 ```
 
 # INSTALLATION

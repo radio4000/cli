@@ -1,5 +1,6 @@
 import {z} from 'zod'
 
+// Zod validation schemas
 export const channelSchema = z.object({
 	id: z.string().optional(),
 	slug: z.string().min(1).max(100),
@@ -36,3 +37,35 @@ export const trackSchema = z.preprocess(
 		source: z.enum(['v1', 'v2']).default('v2')
 	})
 )
+
+// SQL CREATE TABLE schemas
+export const channelSQL = `CREATE TABLE IF NOT EXISTS channels (
+  id TEXT PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  url TEXT,
+  image TEXT,
+  latitude REAL,
+  longitude REAL,
+  track_count INTEGER,
+  firebase_id TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  source TEXT
+);`
+
+export const trackSQL = `CREATE TABLE IF NOT EXISTS tracks (
+  id TEXT PRIMARY KEY,
+  firebase_id TEXT,
+  channel_id TEXT,
+  slug TEXT NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  description TEXT,
+  discogs_url TEXT,
+  tags TEXT,
+  created_at TEXT,
+  updated_at TEXT,
+  source TEXT
+);`

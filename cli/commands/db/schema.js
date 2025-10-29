@@ -1,34 +1,8 @@
-const schemas = {
-	channels: `CREATE TABLE IF NOT EXISTS channels (
-  id TEXT PRIMARY KEY,
-  slug TEXT UNIQUE NOT NULL,
-  name TEXT,
-  description TEXT,
-  url TEXT,
-  image TEXT,
-  link1href TEXT,
-  link1title TEXT,
-  link2href TEXT,
-  link2title TEXT,
-  link3href TEXT,
-  link3title TEXT,
-  created_at TEXT,
-  updated_at TEXT,
-  source TEXT
-);`,
+import {channelSQL, trackSQL} from '../../lib/schema.js'
 
-	tracks: `CREATE TABLE IF NOT EXISTS tracks (
-  id TEXT PRIMARY KEY,
-  slug TEXT,
-  title TEXT,
-  url TEXT,
-  description TEXT,
-  discogs_url TEXT,
-  tags TEXT,
-  created_at TEXT,
-  updated_at TEXT,
-  source TEXT
-);`
+const schemas = {
+	channels: channelSQL,
+	tracks: trackSQL
 }
 
 const selectSchemas = (input) => {

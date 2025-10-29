@@ -125,4 +125,36 @@ describe('listTracks', () => {
 		const tracks = await listTracks({channelSlugs: ['-songs'], limit: 5})
 		expect(tracks.every((tr) => tr.slug === '-songs')).toBe(true)
 	})
+
+	test('throws 404 error for nonexistent channel', async () => {
+		const promise = listTracks({
+			channelSlugs: ['nonexistent-channel-12345']
+		})
+
+		await expect(promise).rejects.toThrow('Channel not found')
+
+		try {
+			await promise
+		} catch (error) {
+			expect(error.code).toBe('CHANNEL_NOT_FOUND')
+			expect(error.statusCode).toBe(404)
+		}
+	})
+
+	test('throws 404 error for multiple nonexistent channels', async () => {
+		const promise = listTracks({
+			channelSlugs: ['nonexistent1', 'nonexistent2']
+		})
+
+		await expect(promise).rejects.toThrow('Channels not found')
+
+		try {
+			await promise
+		} catch (error) {
+			expect(error.message).toContain('nonexistent1')
+			expect(error.message).toContain('nonexistent2')
+			expect(error.code).toBe('CHANNEL_NOT_FOUND')
+			expect(error.statusCode).toBe(404)
+		}
+	})
 })
