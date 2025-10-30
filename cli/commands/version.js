@@ -10,10 +10,6 @@ export default {
 	handler: async () => {
 		const pkgPath = resolve(__dirname, '../../package.json')
 		const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
-
-		return {
-			data: `r4 v${pkg.version}`,
-			format: 'text'
-		}
+		return `r4 v${pkg.version}`
 	}
 }

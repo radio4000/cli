@@ -63,21 +63,18 @@ export default {
 
 				// Handle empty results
 				if (channelCount === 0) {
-					return {data: `No channels found for "${query}"`, format: 'text'}
+					return `No channels found for "${query}"`
 				}
 
 				// Return formatted output
 				if (json) {
-					return {data: results, format: 'json'}
+					return JSON.stringify(results, null, 2)
 				}
 
 				const formatted = results
 					.map((ch) => `${ch.slug}\t${ch.name || 'Untitled'}`)
 					.join('\n')
-				return {
-					data: `Found ${channelCount} channel${channelCount !== 1 ? 's' : ''}:\n${formatted}`,
-					format: 'text'
-				}
+				return `Found ${channelCount} channel${channelCount !== 1 ? 's' : ''}:\n${formatted}`
 			} else if (tracks) {
 				// Search only tracks
 				results = await searchTracks(query, options)
@@ -85,21 +82,18 @@ export default {
 
 				// Handle empty results
 				if (trackCount === 0) {
-					return {data: `No tracks found for "${query}"`, format: 'text'}
+					return `No tracks found for "${query}"`
 				}
 
 				// Return formatted output
 				if (json) {
-					return {data: results, format: 'json'}
+					return JSON.stringify(results, null, 2)
 				}
 
 				const formatted = results
 					.map((t) => `${t.title || 'Untitled'}\t${t.url}`)
 					.join('\n')
-				return {
-					data: `Found ${trackCount} track${trackCount !== 1 ? 's' : ''}:\n${formatted}`,
-					format: 'text'
-				}
+				return `Found ${trackCount} track${trackCount !== 1 ? 's' : ''}:\n${formatted}`
 			} else {
 				// Search both (default behavior)
 				results = await searchAll(query, options)
@@ -108,12 +102,12 @@ export default {
 
 				// Handle empty results
 				if (channelCount === 0 && trackCount === 0) {
-					return {data: `No results found for "${query}"`, format: 'text'}
+					return `No results found for "${query}"`
 				}
 
 				// Return formatted output
 				if (json) {
-					return {data: results, format: 'json'}
+					return JSON.stringify(results, null, 2)
 				}
 
 				const parts = []
@@ -132,7 +126,7 @@ export default {
 					parts.push(`Tracks (${trackCount}):\n${formatted}`)
 				}
 
-				return {data: parts.join('\n\n'), format: 'text'}
+				return parts.join('\n\n')
 			}
 		} catch (error) {
 			throw new Error(`Search failed: ${error.message}`)

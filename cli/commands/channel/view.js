@@ -1,5 +1,6 @@
 import {formatOption} from '../../lib/common-options.js'
 import {getChannel} from '../../lib/data.js'
+import {formatOutput} from '../../lib/formatters.js'
 
 /**
  * Format a single channel as human-readable text
@@ -65,28 +66,21 @@ export default {
 		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
 		const format = input.format || 'json'
 
-		// For text format, use custom formatter
+		// Custom text formatting for channels
 		if (format === 'text') {
-			const formatted = channels.map(formatChannelText).join('\n\n---\n\n')
-			return {
-				data: formatted,
-				format: 'text'
-			}
+			return channels.map(formatChannelText).join('\n\n---\n\n')
 		}
 
-		// For json/sql, return raw data (unwrap if single result)
+		// Use generic formatter for json/sql (unwrap if single result)
 		const data = channels.length === 1 ? channels[0] : channels
-		return {
-			data,
-			format,
-			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
-		}
+		return formatOutput(data, format, {table: 'channels'})
 	},
 
 	examples: [
 		'r4 channel view ko002',
 		'r4 channel view ko002 oskar',
-		'r4 channel view ko002 --format sql',
-		'r4 channel view ko002 --format json'
+		'r4 channel view ko002 --format text',
+		'r4 channel view ko002 --format json',
+		'r4 channel view ko002 --format sql'
 	]
 }

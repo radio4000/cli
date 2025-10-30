@@ -64,7 +64,7 @@ export default {
 			console.log(
 				`\nPlease download the channel first with: r4 download ${slug}`
 			)
-			return {data: '', format: 'text'}
+			return ''
 		}
 
 		// Clean existing tags folder if requested
@@ -82,7 +82,7 @@ export default {
 
 		if (tagMap.size === 0) {
 			console.log('No tags found in channel tracks')
-			return {data: '', format: 'text'}
+			return ''
 		}
 
 		// Statistics
@@ -185,7 +185,7 @@ export default {
 			}
 		}
 
-		return {data: '', format: 'text'}
+		return ''
 	},
 
 	examples: [

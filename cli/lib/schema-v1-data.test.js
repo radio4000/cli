@@ -37,9 +37,11 @@ describe('trackSchema validation against v1 data', () => {
 			}
 		})
 
-		if (errors.length > 0) {
+		// Allow small number of invalid tracks in sample (legacy data)
+		// Only log if we exceed the threshold
+		if (errors.length >= 10) {
 			console.log(
-				`\nFound ${errors.length} validation errors in first 1000 tracks:`
+				`\nFound ${errors.length} validation errors in first 1000 tracks (threshold: 10):`
 			)
 			errors.slice(0, 10).forEach(({index, track, error}) => {
 				console.log(`\nTrack ${index}: ${track.title || '(empty title)'}`)
@@ -47,7 +49,6 @@ describe('trackSchema validation against v1 data', () => {
 			})
 		}
 
-		// Allow small number of invalid tracks in sample (legacy data)
 		expect(errors.length).toBeLessThan(10)
 	})
 
@@ -76,12 +77,19 @@ describe('trackSchema validation against v1 data', () => {
 			}
 		})
 
-		console.log(`\nTotal tracks: ${tracks.length}`)
-		console.log(
-			`Invalid tracks: ${errors.length} (${((errors.length / tracks.length) * 100).toFixed(3)}%)`
-		)
+		// These invalid tracks are expected (legacy v1 data)
+		// They are filtered out in loadV1Tracks() in data.js
+		// Only log details if we exceed thresholds
+		const errorRate = errors.length / tracks.length
+		const exceededCount = errors.length >= 100
+		const exceededRate = errorRate >= 0.001
 
-		if (errors.length > 0) {
+		if (exceededCount || exceededRate) {
+			console.log(`\nTotal tracks: ${tracks.length}`)
+			console.log(
+				`Invalid tracks: ${errors.length} (${(errorRate * 100).toFixed(3)}%)`
+			)
+
 			console.log(`\nValidation errors by field:`)
 			Object.entries(errorTypes).forEach(([field, count]) => {
 				console.log(`  ${field}: ${count} errors`)
@@ -95,9 +103,7 @@ describe('trackSchema validation against v1 data', () => {
 			})
 		}
 
-		// These invalid tracks are expected (legacy v1 data)
-		// They are filtered out in loadV1Tracks() in data.js
 		expect(errors.length).toBeLessThan(100) // Allow some bad legacy data
-		expect(errors.length / tracks.length).toBeLessThan(0.001) // Less than 0.1% invalid
+		expect(errorRate).toBeLessThan(0.001) // Less than 0.1% invalid
 	})
 })

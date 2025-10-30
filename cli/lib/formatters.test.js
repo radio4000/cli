@@ -1,5 +1,10 @@
 import {describe, expect, test} from 'bun:test'
-import {formatJSON, formatOutput, formatPlainText, formatSQL} from './output.js'
+import {
+	formatJSON,
+	formatOutput,
+	formatPlainText,
+	formatSQL
+} from './formatters.js'
 
 describe('formatJSON', () => {
 	test('formats object as pretty JSON', () => {

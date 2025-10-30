@@ -48,8 +48,7 @@ export default {
 		const {tags, sortedTags, tagMap} = getUniqueTags(tracks)
 
 		if (tags.length === 0) {
-			console.log(`No tags found in channel: ${channel.name} (@${slug})`)
-			return {data: '', format: 'text'}
+			return `No tags found in channel: ${channel.name} (@${slug})`
 		}
 
 		// Choose which list to use
@@ -78,37 +77,29 @@ export default {
 				}
 				return {tag: item, count: tagMap.get(item)}
 			})
-			return {
-				data: jsonData,
-				format: 'json'
-			}
-		} else if (format === 'counts') {
-			// Show counts always
-			console.log(`Tags in ${channel.name} (@${slug}):\n`)
+			return JSON.stringify(jsonData, null, 2)
+		}
+
+		// Text formats
+		const lines = [`Tags in ${channel.name} (@${slug}):\n`]
+
+		if (format === 'counts' || sorted) {
+			// Show counts
 			for (const item of tagList) {
 				const [tag, count] = Array.isArray(item)
 					? item
 					: [item, tagMap.get(item)]
-				console.log(`${count.toString().padStart(3, ' ')}  ${tag}`)
+				lines.push(`${count.toString().padStart(3, ' ')}  ${tag}`)
 			}
-			return {data: '', format: 'text'}
 		} else {
-			// Default text format - just tag names (or with counts if sorted)
-			console.log(`Tags in ${channel.name} (@${slug}):\n`)
-			if (sorted) {
-				// Show counts when sorted
-				for (const [tag, count] of tagList) {
-					console.log(`${count.toString().padStart(3, ' ')}  ${tag}`)
-				}
-			} else {
-				// Just tags, alphabetically
-				for (const item of tagList) {
-					const tag = Array.isArray(item) ? item[0] : item
-					console.log(tag)
-				}
+			// Just tags, alphabetically
+			for (const item of tagList) {
+				const tag = Array.isArray(item) ? item[0] : item
+				lines.push(tag)
 			}
-			return {data: '', format: 'text'}
 		}
+
+		return lines.join('\n')
 	},
 
 	examples: [

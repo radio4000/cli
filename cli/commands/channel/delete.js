@@ -1,6 +1,7 @@
 import {sqlOption} from '../../lib/common-options.js'
 import {deleteChannel} from '../../lib/data.js'
 
+/** @type {import('../../../cli-framework/types.js').CommandDefinition} */
 export default {
 	description: 'Delete one or more channels',
 

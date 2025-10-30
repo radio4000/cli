@@ -1,6 +1,8 @@
 import {formatOption} from '../../lib/common-options.js'
 import {getTrack} from '../../lib/data.js'
+import {formatOutput} from '../../lib/formatters.js'
 
+/** @type {import('../../../cli-framework/types.js').CommandDefinition} */
 export default {
 	description: 'View detailed information about one or more tracks',
 
@@ -20,11 +22,8 @@ export default {
 		const tracks = await Promise.all(ids.map((id) => getTrack(id)))
 		const format = input.format || 'json'
 		const data = tracks.length === 1 ? tracks[0] : tracks
-		return {
-			data,
-			format,
-			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
-		}
+		const formatOptions = format === 'sql' ? {table: 'tracks'} : undefined
+		return formatOutput(data, format, formatOptions)
 	},
 
 	examples: [

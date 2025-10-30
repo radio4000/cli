@@ -29,7 +29,7 @@ export default {
 
 			if (!email || !email.includes('@')) {
 				console.error('Invalid email address')
-				return {data: {success: false}, format: 'json'}
+				return JSON.stringify({success: false})
 			}
 
 			// Step 1: Send OTP
@@ -41,7 +41,7 @@ export default {
 
 			if (otpError) {
 				console.error(`Error: ${otpError.message}`)
-				return {data: {success: false, error: otpError.message}, format: 'json'}
+				return JSON.stringify({success: false, error: otpError.message})
 			}
 
 			console.error(
@@ -54,7 +54,7 @@ export default {
 
 			if (!trimmedCode) {
 				console.error('No code entered')
-				return {data: {success: false}, format: 'json'}
+				return JSON.stringify({success: false})
 			}
 
 			// Step 3: Verify OTP
@@ -69,10 +69,7 @@ export default {
 				console.error(
 					`Verification failed: ${verifyError?.message || 'Invalid or expired code'}`
 				)
-				return {
-					data: {success: false, error: verifyError?.message},
-					format: 'json'
-				}
+				return JSON.stringify({success: false, error: verifyError?.message})
 			}
 
 			// Step 4: Save session
@@ -81,8 +78,8 @@ export default {
 			console.error(`Authenticated as ${verifyData.session.user.email}`)
 			console.error('Session saved to ~/.config/radio4000/config.json')
 
-			return {
-				data: {
+			return JSON.stringify(
+				{
 					success: true,
 					user: {
 						id: verifyData.session.user.id,
@@ -90,8 +87,9 @@ export default {
 					},
 					message: 'Authenticated successfully'
 				},
-				format: 'json'
-			}
+				null,
+				2
+			)
 		} finally {
 			rl.close()
 		}

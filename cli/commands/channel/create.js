@@ -1,7 +1,9 @@
 import {sqlOption} from '../../lib/common-options.js'
 import {createChannel} from '../../lib/data.js'
+import {formatOutput} from '../../lib/formatters.js'
 import {channelSchema} from '../../lib/schema.js'
 
+/** @type {import('../../../cli-framework/types.js').CommandDefinition} */
 export default {
 	description: 'Create a new channel',
 
@@ -25,11 +27,6 @@ export default {
 			description: 'Channel description',
 			default: ''
 		},
-		image: {
-			type: 'string',
-			description: 'Channel image URL',
-			default: ''
-		},
 		...sqlOption
 	},
 
@@ -41,17 +38,13 @@ export default {
 		const channelData = {
 			slug: input.slug,
 			name: input.name,
-			description: input.description || '',
-			image: input.image || ''
+			description: input.description || ''
 		}
 
 		const channel = await createChannel(channelData)
 		const format = input.sql ? 'sql' : 'json'
-		return {
-			data: channel,
-			format,
-			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
-		}
+		const formatOptions = format === 'sql' ? {table: 'channels'} : undefined
+		return formatOutput(channel, format, formatOptions)
 	},
 
 	examples: [

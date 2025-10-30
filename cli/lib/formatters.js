@@ -11,9 +11,7 @@
  * @returns {string} Formatted JSON string
  */
 export function formatJSON(data, {pretty = true} = {}) {
-	if (pretty) {
-		return JSON.stringify(data, null, 2)
-	}
+	if (pretty) return JSON.stringify(data, null, 2)
 	return JSON.stringify(data)
 }
 

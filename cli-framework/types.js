@@ -12,6 +12,10 @@ export const ArgSchema = z.object({
 })
 
 /**
+ * @typedef {z.infer<typeof ArgSchema>} Arg
+ */
+
+/**
  * Schema for option definition (flags)
  * Based on Node.js util.parseArgs format
  */
@@ -23,6 +27,10 @@ export const OptionSchema = z.object({
 	short: z.string().length(1).optional(), // short flag like -h
 	parse: z.function().optional() // custom parser for validation/transformation
 })
+
+/**
+ * @typedef {z.infer<typeof OptionSchema>} Option
+ */
 
 /**
  * Schema for command definition
@@ -37,6 +45,10 @@ export const CommandSchema = z.object({
 	examples: z.array(z.string()).optional(),
 	hidden: z.boolean().optional().default(false) // hide from help
 })
+
+/**
+ * @typedef {z.infer<typeof CommandSchema>} CommandDefinition
+ */
 
 /**
  * Custom error types for CLI

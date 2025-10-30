@@ -120,9 +120,6 @@ SEE ALSO
 R4 1.0                    2025-10-28                       R4(1)
 `.trim()
 
-		return {
-			data: help,
-			format: 'text'
-		}
+		return help
 	}
 }

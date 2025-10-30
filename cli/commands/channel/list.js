@@ -1,6 +1,8 @@
 import {formatOption} from '../../lib/common-options.js'
 import {listChannels} from '../../lib/data.js'
+import {formatOutput} from '../../lib/formatters.js'
 
+/** @type {import('../../../cli-framework/types.js').CommandDefinition} */
 export default {
 	description: 'List all channels (from v2 API or bundled v1 data)',
 
@@ -14,15 +16,10 @@ export default {
 	},
 
 	handler: async (input) => {
-		// Use default limit of 100 if not specified
 		const limit = input.limit ?? 100
 		const channels = await listChannels({limit})
 		const format = input.format || 'json'
-		return {
-			data: channels,
-			format,
-			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
-		}
+		return formatOutput(channels, format, {table: 'channels'})
 	},
 
 	examples: [

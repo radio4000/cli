@@ -82,18 +82,18 @@ describe('channel view command - format options', () => {
 		const command = await import('./view.js')
 		const result = await command.default.handler({slug: 'ko002'})
 
-		expect(result.format).toBe('json')
-		expect(result.data).toBeDefined()
-		expect(result.data.slug).toBe('ko002')
+		expect(typeof result).toBe('string')
+		const parsed = JSON.parse(result)
+		expect(parsed.slug).toBe('ko002')
 	})
 
 	test('formats output as SQL', async () => {
 		const command = await import('./view.js')
 		const result = await command.default.handler({slug: 'ko002', format: 'sql'})
 
-		expect(result.format).toBe('sql')
-		expect(result.formatOptions).toEqual({table: 'channels'})
-		expect(result.data.slug).toBe('ko002')
+		expect(typeof result).toBe('string')
+		expect(result).toContain('INSERT INTO channels')
+		expect(result).toContain('ko002')
 	})
 
 	test('formats output as text', async () => {
@@ -103,8 +103,8 @@ describe('channel view command - format options', () => {
 			format: 'text'
 		})
 
-		expect(result.format).toBe('text')
-		expect(typeof result.data).toBe('string')
-		expect(result.data).toContain('ko002') // Formatted text should contain the slug
+		expect(typeof result).toBe('string')
+		expect(result).toContain('ko002') // Formatted text should contain the slug
+		expect(result).toContain('Info:') // Check for text formatting
 	})
 })
