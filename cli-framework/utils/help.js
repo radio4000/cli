@@ -1,6 +1,7 @@
 /**
  * Help text generation from command definitions
  */
+import {ErrorTypes} from '../types.js'
 
 /**
  * Format argument for usage line
@@ -221,4 +222,45 @@ export function generateMainHelp(commands, programName, options = {}) {
 	)
 
 	return lines.join('\n').trimEnd()
+}
+
+/**
+ * Format a CLIError for display
+ * @param {CLIError} error - The error to format
+ * @returns {string} Formatted error message
+ */
+export function formatCLIError(error) {
+	if (error.type === ErrorTypes.HELP_REQUESTED && error.context?.command) {
+		return generateCommandHelp(
+			error.context.command,
+			error.context.commandName || ''
+		)
+	}
+
+	if (error.type === ErrorTypes.UNKNOWN_COMMAND && error.context?.available) {
+		let output = ''
+
+		// If there's an unknown command (actual mistake), show it
+		if (error.context.unknownCommand) {
+			output += `Unknown command: ${error.context.unknownCommand}\n\n`
+		}
+
+		// Show available options
+		const label = error.context.commandPath
+			? 'Available subcommands:'
+			: 'Available commands:'
+		const commands = error.context.available
+			.map((cmd) => `  ${cmd.name}`)
+			.join('\n')
+		output += `${label}\n${commands}`
+
+		return output
+	}
+
+	// Actual errors
+	let output = `Error: ${error.message}`
+	if (error.context && Object.keys(error.context).length > 0) {
+		output += `\nContext: ${JSON.stringify(error.context, null, 2)}`
+	}
+	return output
 }

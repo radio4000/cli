@@ -2,7 +2,7 @@
 import {dirname, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {executeCommand} from '../cli-framework/index.js'
-import {formatCLIError} from '../cli-framework/types.js'
+import {formatCLIError} from '../cli-framework/utils/help.js'
 import {formatOutput} from '../cli-framework/utils/output.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

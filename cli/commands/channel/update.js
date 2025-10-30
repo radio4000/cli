@@ -1,8 +1,3 @@
-import {
-	formatResult,
-	requireUpdates,
-	toArray
-} from '../../lib/command-helpers.js'
 import {sqlOption} from '../../lib/common-options.js'
 import {updateChannel} from '../../lib/data.js'
 
@@ -35,22 +30,28 @@ export default {
 	},
 
 	handler: async (input) => {
-		const slugs = toArray(input.slug)
+		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
 
 		const updates = {}
 		if (input.name) updates.name = input.name
 		if (input.description !== undefined) updates.description = input.description
 		if (input.image !== undefined) updates.image = input.image
 
-		requireUpdates(updates)
+		if (Object.keys(updates).length === 0) {
+			throw new Error('At least one field must be provided for update')
+		}
 
 		const channels = await Promise.all(
 			slugs.map((slug) => updateChannel(slug, updates))
 		)
 
-		return formatResult(channels, input.sql ? 'sql' : 'json', 'channels', {
-			asSingle: true
-		})
+		const format = input.sql ? 'sql' : 'json'
+		const data = channels.length === 1 ? channels[0] : channels
+		return {
+			data,
+			format,
+			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
+		}
 	},
 
 	examples: [

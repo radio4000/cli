@@ -385,48 +385,6 @@ describe('runCommand - Options (Flags)', () => {
 	})
 })
 
-describe('runCommand - Conflicts', () => {
-	test('throws error for conflicting options', async () => {
-		const command = {
-			description: 'Test',
-			args: [],
-			options: {
-				json: {type: 'boolean', description: 'JSON output'},
-				sql: {
-					type: 'boolean',
-					description: 'SQL output',
-					conflicts: ['json']
-				}
-			},
-			handler: async () => {}
-		}
-
-		try {
-			await runCommand(command, ['--json', '--sql'])
-			expect(true).toBe(false) // should not reach
-		} catch (error) {
-			expect(error).toBeInstanceOf(CLIError)
-			expect(error.type).toBe(ErrorTypes.CONFLICTING_OPTIONS)
-			expect(error.message).toContain('cannot be used together')
-		}
-	})
-
-	test('allows non-conflicting options', async () => {
-		const command = {
-			description: 'Test',
-			args: [],
-			options: {
-				json: {type: 'boolean', description: 'JSON output'},
-				verbose: {type: 'boolean', description: 'Verbose'}
-			},
-			handler: async (input) => input
-		}
-
-		const result = await runCommand(command, ['--json', '--verbose'])
-		expect(result).toEqual({json: true, verbose: true})
-	})
-})
-
 describe('runCommand - Validation', () => {
 	test('runs Zod validation on arguments', async () => {
 		const command = {

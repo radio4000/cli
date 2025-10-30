@@ -1,4 +1,3 @@
-import {formatResult, toArray} from '../../lib/command-helpers.js'
 import {sqlOption} from '../../lib/common-options.js'
 import {deleteTrack} from '../../lib/data.js'
 
@@ -17,12 +16,15 @@ export default {
 	options: sqlOption,
 
 	handler: async (input) => {
-		const ids = toArray(input.id)
+		const ids = Array.isArray(input.id) ? input.id : [input.id]
 		const results = await Promise.all(ids.map((id) => deleteTrack(id)))
-
-		return formatResult(results, input.sql ? 'sql' : 'json', 'tracks', {
-			asSingle: true
-		})
+		const format = input.sql ? 'sql' : 'json'
+		const data = results.length === 1 ? results[0] : results
+		return {
+			data,
+			format,
+			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: ['r4 track delete abc123', 'r4 track delete abc123 def456 ghi789']

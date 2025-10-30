@@ -1,4 +1,3 @@
-import {formatResult, toArray} from '../../lib/command-helpers.js'
 import {formatOption} from '../../lib/common-options.js'
 import {getTrack} from '../../lib/data.js'
 
@@ -17,10 +16,15 @@ export default {
 	options: formatOption,
 
 	handler: async (input) => {
-		const ids = toArray(input.id)
+		const ids = Array.isArray(input.id) ? input.id : [input.id]
 		const tracks = await Promise.all(ids.map((id) => getTrack(id)))
-
-		return formatResult(tracks, input.format, 'tracks', {asSingle: true})
+		const format = input.format || 'json'
+		const data = tracks.length === 1 ? tracks[0] : tracks
+		return {
+			data,
+			format,
+			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: [

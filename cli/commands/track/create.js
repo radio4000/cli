@@ -1,5 +1,4 @@
 import {z} from 'zod'
-import {formatResult} from '../../lib/command-helpers.js'
 import {sqlOption} from '../../lib/common-options.js'
 import {createTrack} from '../../lib/data.js'
 
@@ -39,7 +38,12 @@ export default {
 		}
 
 		const track = await createTrack(trackData)
-		return formatResult(track, input.sql ? 'sql' : 'json', 'tracks')
+		const format = input.sql ? 'sql' : 'json'
+		return {
+			data: track,
+			format,
+			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: [

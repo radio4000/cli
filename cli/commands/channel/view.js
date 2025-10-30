@@ -1,4 +1,3 @@
-import {formatResult, toArray} from '../../lib/command-helpers.js'
 import {formatOption} from '../../lib/common-options.js'
 import {getChannel} from '../../lib/data.js'
 
@@ -62,7 +61,7 @@ export default {
 	options: formatOption,
 
 	handler: async (input) => {
-		const slugs = toArray(input.slug)
+		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
 		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
 		const format = input.format || 'json'
 
@@ -75,8 +74,13 @@ export default {
 			}
 		}
 
-		// For json/sql, return raw data
-		return formatResult(channels, format, 'channels', {asSingle: true})
+		// For json/sql, return raw data (unwrap if single result)
+		const data = channels.length === 1 ? channels[0] : channels
+		return {
+			data,
+			format,
+			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
+		}
 	},
 
 	examples: [

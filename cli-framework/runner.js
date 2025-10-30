@@ -57,27 +57,6 @@ function parsePositionalArgs(argDefs, positionals) {
 }
 
 /**
- * Check for conflicting options
- * @param {Object} optionDefs - Option definitions from command
- * @param {Object} values - Parsed option values
- */
-function checkConflicts(optionDefs, values) {
-	for (const [name, def] of Object.entries(optionDefs)) {
-		if (def.conflicts && values[name]) {
-			for (const conflictName of def.conflicts) {
-				if (values[conflictName]) {
-					throw new CLIError(
-						ErrorTypes.CONFLICTING_OPTIONS,
-						`Options --${name} and --${conflictName} cannot be used together`,
-						{options: [name, conflictName]}
-					)
-				}
-			}
-		}
-	}
-}
-
-/**
  * Parse and validate option values
  * @param {Object} optionDefs - Option definitions from command
  * @param {Object} values - Raw parsed values from parseArgs
@@ -158,14 +137,13 @@ function buildParseArgsOptions(optionDefs) {
 
 	for (const [name, def] of Object.entries(optionDefs)) {
 		// Node.js parseArgs only supports 'boolean' and 'string'
-		// We'll treat 'number' as 'string' and convert it later
+		// Numbers will be parsed as strings and converted in parseOptionValues
 		options[name] = {
-			type: def.type === 'number' ? 'string' : def.type
+			type: def.type === 'boolean' ? 'boolean' : 'string'
 		}
 		if (def.short) {
 			options[name].short = def.short
 		}
-		// Note: parseArgs doesn't support defaults, we handle that separately
 	}
 
 	return options
@@ -204,9 +182,6 @@ export async function runCommand(command, argv = [], context = {}) {
 
 		// Parse and validate option values
 		const flags = parseOptionValues(command.options, values)
-
-		// Check for conflicting options
-		checkConflicts(command.options, flags)
 
 		// Merge args and flags for validation and handler
 		const mergedInput = {...args, ...flags}

@@ -1,8 +1,3 @@
-import {
-	formatResult,
-	requireUpdates,
-	toArray
-} from '../../lib/command-helpers.js'
 import {sqlOption} from '../../lib/common-options.js'
 import {updateTrack} from '../../lib/data.js'
 
@@ -31,19 +26,25 @@ export default {
 	},
 
 	handler: async (input) => {
-		const ids = toArray(input.id)
+		const ids = Array.isArray(input.id) ? input.id : [input.id]
 
 		const updates = {}
 		if (input.title) updates.title = input.title
 		if (input.url) updates.url = input.url
 
-		requireUpdates(updates)
+		if (Object.keys(updates).length === 0) {
+			throw new Error('At least one field must be provided for update')
+		}
 
 		const tracks = await Promise.all(ids.map((id) => updateTrack(id, updates)))
 
-		return formatResult(tracks, input.sql ? 'sql' : 'json', 'tracks', {
-			asSingle: true
-		})
+		const format = input.sql ? 'sql' : 'json'
+		const data = tracks.length === 1 ? tracks[0] : tracks
+		return {
+			data,
+			format,
+			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
+		}
 	},
 
 	examples: [
