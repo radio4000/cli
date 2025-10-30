@@ -1,4 +1,5 @@
-import {getCurrentUser, isSessionExpired, loadSession} from '../../lib/auth.js'
+import {sdk} from '@radio4000/sdk'
+import {loadSession} from '../../lib/auth.js'
 import {formatJSON} from '../../lib/formatters.js'
 
 export default {
@@ -15,8 +16,7 @@ export default {
 			})
 		}
 
-		const expired = isSessionExpired(session)
-		if (expired) {
+		if (Date.now() / 1000 > session.expires_at) {
 			console.error('Session expired. Run: r4 auth login')
 			return formatJSON({
 				authenticated: false,
@@ -24,9 +24,9 @@ export default {
 			})
 		}
 
-		const user = await getCurrentUser()
+		const {data, error} = await sdk.supabase.auth.getUser(session.access_token)
 
-		if (!user) {
+		if (error || !data.user) {
 			console.error('Failed to fetch user')
 			return formatJSON({
 				authenticated: false,
@@ -34,14 +34,14 @@ export default {
 			})
 		}
 
-		console.error(`Logged in as ${user.email} (${user.id})`)
+		console.error(`Logged in as ${data.user.email} (${data.user.id})`)
 
 		return formatJSON({
 			authenticated: true,
 			user: {
-				id: user.id,
-				email: user.email,
-				created_at: user.created_at
+				id: data.user.id,
+				email: data.user.email,
+				created_at: data.user.created_at
 			},
 			session: {
 				expires_at: session.expires_at,
