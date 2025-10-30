@@ -383,6 +383,130 @@ describe('runCommand - Options (Flags)', () => {
 			expect(error.type).toBe(ErrorTypes.MISSING_ARGUMENT)
 		}
 	})
+
+	test('parses multiple values for single flag', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				tag: {
+					type: 'string',
+					description: 'Tags to filter',
+					multiple: true
+				}
+			},
+			handler: async (input) => input
+		}
+
+		const result = await runCommand(command, [
+			'--tag',
+			'a',
+			'--tag',
+			'b',
+			'--tag',
+			'c'
+		])
+		expect(result).toEqual({tag: ['a', 'b', 'c']})
+	})
+
+	test('parses multiple values for flag with short option', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				tag: {
+					type: 'string',
+					short: 't',
+					description: 'Tags to filter',
+					multiple: true
+				}
+			},
+			handler: async (input) => input
+		}
+
+		const result = await runCommand(command, ['-t', 'foo', '-t', 'bar'])
+		expect(result).toEqual({tag: ['foo', 'bar']})
+	})
+
+	test('handles empty array when multiple flag not provided', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				tag: {
+					type: 'string',
+					description: 'Tags to filter',
+					multiple: true
+				}
+			},
+			handler: async (input) => input
+		}
+
+		const result = await runCommand(command, [])
+		expect(result).toEqual({})
+	})
+
+	test('parses comma-separated values for multiple option', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				tag: {
+					type: 'string',
+					description: 'Tags to filter',
+					multiple: true
+				}
+			},
+			handler: async (input) => input
+		}
+
+		const result = await runCommand(command, ['--tag', 'jazz,ambient,drone'])
+		expect(result).toEqual({tag: ['jazz', 'ambient', 'drone']})
+	})
+
+	test('parses mixed comma-separated and multiple flags', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				tag: {
+					type: 'string',
+					description: 'Tags to filter',
+					multiple: true
+				}
+			},
+			handler: async (input) => input
+		}
+
+		const result = await runCommand(command, [
+			'--tag',
+			'jazz,ambient',
+			'--tag',
+			'drone'
+		])
+		expect(result).toEqual({tag: ['jazz', 'ambient', 'drone']})
+	})
+
+	test('trims whitespace in comma-separated values', async () => {
+		const command = {
+			description: 'Test',
+			args: [],
+			options: {
+				tag: {
+					type: 'string',
+					description: 'Tags to filter',
+					multiple: true
+				}
+			},
+			handler: async (input) => input
+		}
+
+		const result = await runCommand(command, [
+			'--tag',
+			' jazz , ambient , drone '
+		])
+		expect(result).toEqual({tag: ['jazz', 'ambient', 'drone']})
+	})
 })
 
 describe('runCommand - Validation', () => {

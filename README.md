@@ -112,21 +112,27 @@ Delete one or more channels
 ## track - Track Operations
 
 ### track list
-List tracks for specified channel(s)
+List tracks for specified channel(s), optionally filtered by tags
 
 **Usage:** `r4 track list [options]`
 
 **Options:**
 - `--channel <slug>` - Channel slug to filter by (can be used multiple times)
+- `--tag <value>` - Filter by tag (supports `--tag a --tag b` or `--tag a,b,c`)
+- `--match-all` - When using multiple tags, require all tags to match (AND logic)
 - `--limit <n>` - Limit number of results
 - `--format <type>` - Output format: text, json, or sql (default: text)
 
 **Examples:**
 ```bash
-r4 track list --channel ko002                        # All tracks from one channel
-r4 track list --channel ko002 --limit 20             # First 20 only
-r4 track list --channel ko002 --channel oskar        # Multiple channels
-r4 track list --channel ko002 --format sql           # SQL INSERT statements
+r4 track list --channel ko002                                    # All tracks from one channel
+r4 track list --channel ko002 --limit 20                         # First 20 only
+r4 track list --channel ko002 --channel oskar                    # Multiple channels
+r4 track list --channel ko002 --tag jazz                         # Filter by single tag
+r4 track list --channel ko002 --tag jazz --tag ambient           # Multiple tags (OR logic)
+r4 track list --channel ko002 --tag jazz,ambient,drone           # Comma-separated tags
+r4 track list --channel ko002 --tag house --tag techno --match-all  # Require all tags (AND logic)
+r4 track list --channel ko002 --format sql                       # SQL INSERT statements
 ```
 
 ### track view
@@ -173,6 +179,56 @@ Update one or more tracks
 Delete one or more tracks
 
 **Usage:** `r4 track delete <id>...`
+
+## tags - Tag Operations
+
+### tags list
+List all tags from a channel with optional sorting and filtering
+
+**Usage:** `r4 tags list <slug> [options]`
+
+**Arguments:**
+- `slug` - Channel slug to list tags from
+
+**Options:**
+- `--sorted` - Sort by occurrence count (most used first)
+- `--limit <n>` - Limit number of tags to show
+- `--min-count <n>` - Only show tags used at least this many times (default: 1)
+- `--format <type>` - Output format: text, json, or counts
+
+**Examples:**
+```bash
+r4 tags list ko002                      # All tags alphabetically
+r4 tags list ko002 --sorted             # By popularity
+r4 tags list ko002 --sorted --limit 10  # Top 10 tags
+r4 tags list ko002 --min-count 5        # Tags used 5+ times
+r4 tags list ko002 --format json        # JSON output
+r4 tags list ko002 --format counts      # With counts
+```
+
+### tags generate
+Generate tag-based folder structure with symlinks to downloaded tracks
+
+**Usage:** `r4 tags generate <slug> [options]`
+
+**Arguments:**
+- `slug` - Channel slug to generate tags for
+
+**Options:**
+- `--output <path>` - Base folder path (defaults to `./<slug>`)
+- `--clean` - Remove existing tags folder before generating (default: true)
+- `--dry-run` - Show what would be created without creating it
+- `--verbose` - Show detailed output
+
+**Examples:**
+```bash
+r4 tags generate ko002                     # Generate tags after downloading
+r4 tags generate ko002 --output ./my-music # Custom location
+r4 tags generate ko002 --dry-run           # Preview without creating
+r4 tags generate ko002 --verbose           # Show all symlinks created
+```
+
+**Note:** Run `r4 download <slug>` first to download the tracks before generating tag folders.
 
 ## download - Download Tracks
 

@@ -47,7 +47,9 @@ const rejectV1Mutation = (type, id) => {
 export async function loadV1Channels() {
 	if (v1ChannelsCache) return v1ChannelsCache
 	const content = await readFile(V1_CHANNELS_PATH, 'utf-8')
-	v1ChannelsCache = JSON.parse(content).map((item) => channelSchema.parse({...item, source: 'v1'}))
+	v1ChannelsCache = JSON.parse(content).map((item) =>
+		channelSchema.parse({...item, source: 'v1'})
+	)
 	return v1ChannelsCache
 }
 
@@ -98,7 +100,10 @@ export async function listChannels(options = {}) {
 		options.limit ? v1Channels.slice(0, options.limit) : v1Channels,
 		(v2Channels, v1) => {
 			const v2Slugs = new Set(v2Channels.map((ch) => ch.slug))
-			const combined = [...v2Channels, ...v1.filter((ch) => !v2Slugs.has(ch.slug))]
+			const combined = [
+				...v2Channels,
+				...v1.filter((ch) => !v2Slugs.has(ch.slug))
+			]
 			return options.limit ? combined.slice(0, options.limit) : combined
 		}
 	)
@@ -197,7 +202,9 @@ export async function listTracks(options = {}) {
 			.filter(Boolean)
 
 		if (invalidTracks.length > 0) {
-			console.error(`Warning: Skipped ${invalidTracks.length} invalid track(s):`)
+			console.error(
+				`Warning: Skipped ${invalidTracks.length} invalid track(s):`
+			)
 			invalidTracks.forEach((t) => {
 				console.error(`  "${t.title}"`)
 				console.error(`    URL: ${t.url}`)
@@ -206,7 +213,9 @@ export async function listTracks(options = {}) {
 			})
 		}
 
-		const combined = [...v2Tracks, ...v1Tracks].filter((tr) => channelSlugs.includes(tr.slug))
+		const combined = [...v2Tracks, ...v1Tracks].filter((tr) =>
+			channelSlugs.includes(tr.slug)
+		)
 		return maxItems ? combined.slice(0, maxItems) : combined
 	} catch (error) {
 		if (error.code === 'CHANNEL_NOT_FOUND') throw error
@@ -285,7 +294,10 @@ export async function searchChannels(query, options = {}) {
 			.map((r) => r.obj),
 		(v2Results, v1Results) => {
 			const v2Slugs = new Set(v2Results.map((ch) => ch.slug))
-			const combined = [...v2Results, ...v1Results.filter((ch) => !v2Slugs.has(ch.slug))]
+			const combined = [
+				...v2Results,
+				...v1Results.filter((ch) => !v2Slugs.has(ch.slug))
+			]
 			return options.limit ? combined.slice(0, options.limit) : combined
 		}
 	)

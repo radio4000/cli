@@ -25,6 +25,7 @@ export const OptionSchema = z.object({
 	required: z.boolean().optional(), // mark option as required
 	default: z.union([z.boolean(), z.string(), z.number()]).optional(),
 	short: z.string().length(1).optional(), // short flag like -h
+	multiple: z.boolean().optional().default(false), // accepts multiple values
 	parse: z.function().optional() // custom parser for validation/transformation
 })
 

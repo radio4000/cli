@@ -95,6 +95,26 @@ function parseOptionValues(optionDefs, values) {
 			continue
 		}
 
+		// Handle comma-separated values for multiple options
+		// Support both --tag a --tag b AND --tag a,b,c
+		if (def.multiple && typeof value === 'string' && value.includes(',')) {
+			value = value
+				.split(',')
+				.map((v) => v.trim())
+				.filter(Boolean)
+		}
+		// Also flatten if we got an array with comma-separated strings
+		if (def.multiple && Array.isArray(value)) {
+			value = value.flatMap((v) =>
+				typeof v === 'string' && v.includes(',')
+					? v
+							.split(',')
+							.map((x) => x.trim())
+							.filter(Boolean)
+					: v
+			)
+		}
+
 		// Convert number type from string
 		if (def.type === 'number' && typeof value === 'string') {
 			const num = Number(value)
@@ -143,6 +163,9 @@ function buildParseArgsOptions(optionDefs) {
 		}
 		if (def.short) {
 			options[name].short = def.short
+		}
+		if (def.multiple) {
+			options[name].multiple = true
 		}
 	}
 

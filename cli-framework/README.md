@@ -1,13 +1,17 @@
 # CLI Framework
 
-A little CLI framework made for the @radio4000/r4 CLI.
+A lightweight CLI framework for building composable command-line tools.
 
-It offers
+## Features
 
-- Every command is a file in the `commands/` directory
-- Commands follow a `CommandDefinition` schema
+- File-based command routing (`commands/` directory)
+- Type-safe command definitions with Zod validation
 - Auto-generated help commands
-- No dependencies but node's util.parseArgs and Zod validation
+- Support for positional arguments and flags
+- Multiple values per flag (e.g., `--tag a --tag b` or `--tag a,b,c`)
+- Short flags (e.g., `-v` for `--verbose`)
+- Custom parsers and validators
+- Zero dependencies except Node.js `util.parseArgs` and Zod
 
 ## Testing
 
@@ -15,7 +19,7 @@ It offers
 bun test cli-framework/
 ```
 
-## Quick start
+## Quick Start
 
 ```javascript
 import { executeCommand, listCommands, listAllCommands } from './cli-framework/index.js'
@@ -34,4 +38,106 @@ await listCommands(commandsDir) // not recursive
 await listAllCommands(commandsDir) // recursive
 ```
 
-See [../cli/index.js](../cli/index.js) for a complete example.
+## Command Definition
+
+### Positional Arguments
+
+```javascript
+export default {
+  description: 'Delete a channel',
+  args: [
+    { name: 'slug', required: true },
+    { name: 'reason', required: false }
+  ],
+  handler: async (input) => {
+    // input.slug, input.reason
+  }
+}
+```
+
+**Multiple values:**
+```javascript
+args: [{ name: 'slugs', required: true, multiple: true }]
+// CLI: r4 command slug1 slug2 slug3
+// input.slugs = ['slug1', 'slug2', 'slug3']
+```
+
+### Options (Flags)
+
+```javascript
+export default {
+  description: 'List channels',
+  options: {
+    json: {
+      type: 'boolean',
+      description: 'Output as JSON',
+      default: false
+    },
+    limit: {
+      type: 'string',
+      description: 'Max results',
+      parse: (val) => parseInt(val, 10)
+    },
+    verbose: {
+      type: 'boolean',
+      short: 'v',
+      description: 'Verbose output'
+    }
+  },
+  handler: async (input) => {
+    // input.json, input.limit, input.verbose
+  }
+}
+```
+
+**Multiple values:**
+```javascript
+options: {
+  tag: {
+    type: 'string',
+    description: 'Filter by tags',
+    multiple: true
+  }
+}
+// CLI: r4 command --tag jazz --tag ambient
+// OR:  r4 command --tag jazz,ambient,drone
+// input.tag = ['jazz', 'ambient', 'drone']
+```
+
+**Required options:**
+```javascript
+options: {
+  email: {
+    type: 'string',
+    required: true,
+    description: 'User email'
+  }
+}
+```
+
+### Validation
+
+Use Zod schemas for type-safe validation:
+
+```javascript
+import { z } from 'zod'
+
+export default {
+  description: 'Create channel',
+  args: [{ name: 'slug', required: true }],
+  options: {
+    tags: { type: 'string', multiple: true }
+  },
+  validate: z.object({
+    slug: z.string().min(3).max(50),
+    tags: z.array(z.string()).optional()
+  }),
+  handler: async (input) => {
+    // input is validated and typed
+  }
+}
+```
+
+## Examples
+
+See [../cli/commands/](../cli/commands/) for real-world command implementations.

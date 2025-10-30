@@ -1,6 +1,7 @@
 import {formatOption} from '../../lib/common-options.js'
 import {listTracks} from '../../lib/data.js'
 import {formatJSON, formatSQL} from '../../lib/formatters.js'
+import {filterTracksByTags} from '../../lib/tags.js'
 
 /**
  * Format a single track as text (title + URL)
@@ -41,7 +42,8 @@ function formatTrackSummary(tracks, limit) {
 }
 
 export default {
-	description: 'List tracks for specified channel(s)',
+	description:
+		'List tracks for specified channel(s), optionally filtered by tags',
 
 	options: {
 		channel: {
@@ -49,6 +51,17 @@ export default {
 			description: 'Channel slug to filter by (can be used multiple times)',
 			multiple: true,
 			required: true
+		},
+		tag: {
+			type: 'string',
+			description: 'Filter by tag (supports --tag a --tag b or --tag a,b,c)',
+			multiple: true
+		},
+		'match-all': {
+			type: 'boolean',
+			description:
+				'When using multiple tags, require all tags to match (AND logic)',
+			default: false
 		},
 		limit: {
 			type: 'number',
@@ -63,11 +76,36 @@ export default {
 	handler: async (input) => {
 		const channelSlugs = input.channel && [input.channel].flat()
 		const format = input.format || 'text'
+		const tags = input.tag
+			? Array.isArray(input.tag)
+				? input.tag
+				: [input.tag]
+			: null
+		const matchAll = input['match-all'] || false
 
-		const tracks = await listTracks({
+		// Fetch all tracks from channel(s), don't apply limit yet if filtering by tags
+		let tracks = await listTracks({
 			channelSlugs,
-			limit: input.limit
+			limit: tags ? undefined : input.limit
 		})
+
+		// Filter by tags if specified
+		if (tags && tags.length > 0) {
+			tracks = filterTracksByTags(tracks, tags, matchAll)
+			// Apply limit after filtering
+			if (input.limit) {
+				tracks = tracks.slice(0, input.limit)
+			}
+		}
+
+		// Handle empty results for text format
+		if (format === 'text' && tracks.length === 0) {
+			if (tags) {
+				const tagLogic = matchAll ? 'all of' : 'any of'
+				return `No tracks found with ${tagLogic}: ${tags.join(', ')}`
+			}
+			return 'No tracks found'
+		}
 
 		// Format based on requested format
 		if (format === 'text') {
@@ -84,6 +122,10 @@ export default {
 		'r4 track list --channel ko002 --limit 20',
 		'r4 track list --channel ko002 --format json',
 		'r4 track list --channel ko002 --format sql',
-		'r4 track list --channel ko002 --channel oskar'
+		'r4 track list --channel ko002 --channel oskar',
+		'r4 track list --channel ko002 --tag jazz',
+		'r4 track list --channel ko002 --tag jazz --tag ambient',
+		'r4 track list --channel ko002 --tag jazz,ambient,drone',
+		'r4 track list --channel ko002 --tag house --tag techno --match-all'
 	]
 }

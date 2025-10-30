@@ -3,9 +3,6 @@
  */
 import {ErrorTypes} from '../types.js'
 
-
-
-
 /**
  * Generate help text for a command
  * @param {Object} command - Command definition
@@ -20,11 +17,13 @@ export function generateCommandHelp(command, commandPath) {
 	const usageParts = [commandPath]
 
 	if (command.args.length > 0) {
-		usageParts.push(...command.args.map(arg => {
-			let formatted = arg.name
-			if (arg.multiple) formatted = `${formatted}...`
-			return arg.required ? `<${formatted}>` : `[${formatted}]`
-		}))
+		usageParts.push(
+			...command.args.map((arg) => {
+				let formatted = arg.name
+				if (arg.multiple) formatted = `${formatted}...`
+				return arg.required ? `<${formatted}>` : `[${formatted}]`
+			})
+		)
 	}
 
 	if (Object.keys(command.options).length > 0) {
