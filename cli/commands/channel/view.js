@@ -7,44 +7,32 @@ import {formatOutput} from '../../lib/formatters.js'
  * Used by: r4 channel view --format text and <slug>.txt in downloads
  */
 export function formatChannelText(channel) {
-	const titleLine = channel.name || 'Untitled Channel'
-	const underline = '='.repeat(titleLine.length)
-	const description = channel.description || 'No description available.'
-	const createdDate = channel.created_at
-		? new Date(channel.created_at).toLocaleDateString()
-		: 'Unknown'
-	const updatedDate = channel.updated_at
-		? new Date(channel.updated_at).toLocaleDateString()
-		: 'Unknown'
+	const title = channel.name || 'Untitled Channel'
 
-	// Build optional sections
-	const sections = []
+	// Build optional sections directly
+	const optional = [
+		channel.url && `Website: ${channel.url}`,
+		channel.image && `Image: ${channel.image}`,
+		channel.latitude !== undefined && `Latitude: ${channel.latitude}`,
+		channel.longitude !== undefined && `Longitude: ${channel.longitude}`,
+		channel.track_count !== undefined && `Tracks: ${channel.track_count}`,
+		channel.firebase_id && `Firebase ID: ${channel.firebase_id}`
+	]
+		.filter(Boolean)
+		.join('\n  ')
 
-	if (channel.url) sections.push(`Website: ${channel.url}`)
-	if (channel.image) sections.push(`Image: ${channel.image}`)
-	if (channel.latitude !== undefined)
-		sections.push(`Latitude: ${channel.latitude}`)
-	if (channel.longitude !== undefined)
-		sections.push(`Longitude: ${channel.longitude}`)
-	if (channel.track_count !== undefined)
-		sections.push(`Tracks: ${channel.track_count}`)
-	if (channel.firebase_id) sections.push(`Firebase ID: ${channel.firebase_id}`)
+	return `${title}
+${'='.repeat(title.length)}
 
-	const optionalSections =
-		sections.length > 0 ? `  ${sections.join('\n  ')}\n` : ''
-
-	return `${titleLine}
-${underline}
-
-${description}
+${channel.description}
 
 Info:
   ID: ${channel.id || 'N/A'}
   Slug: ${channel.slug}
   Source: ${channel.source || 'N/A'}
-  Created: ${createdDate}
-  Updated: ${updatedDate}
-${optionalSections}`
+  Created: ${channel.created_at ? new Date(channel.created_at).toLocaleDateString() : 'Unknown'}
+  Updated: ${channel.updated_at ? new Date(channel.updated_at).toLocaleDateString() : 'Unknown'}
+${optional ? `  ${optional}\n` : ''}`
 }
 
 export default {

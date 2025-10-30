@@ -94,7 +94,7 @@ export async function listChannels(options = {}) {
 	return v2WithV1Fallback(
 		async () => {
 			const {data, error} = await sdk.channels.readChannels()
-			if (error) throw new Error(error)
+			if (error) throw error
 			return data.map((item) => channelSchema.parse({...item, source: 'v2'}))
 		},
 		options.limit ? v1Channels.slice(0, options.limit) : v1Channels,
@@ -112,7 +112,7 @@ export async function listChannels(options = {}) {
 export async function getChannel(slug) {
 	try {
 		const {data, error} = await sdk.channels.readChannel(slug)
-		if (error) throw new Error(error)
+		if (error) throw error
 		return channelSchema.parse({...data, source: 'v2'})
 	} catch {
 		const channel = (await loadV1Channels()).find((ch) => ch.slug === slug)
@@ -124,7 +124,7 @@ export async function getChannel(slug) {
 export async function createChannel(data) {
 	await requireAuth()
 	const {data: channel, error} = await sdk.channels.createChannel(data)
-	if (error) throw new Error(error)
+	if (error) throw error
 	return channelSchema.parse({...channel, source: 'v2'})
 }
 
@@ -134,7 +134,7 @@ export async function updateChannel(slug, updates) {
 	if (channel.source === 'v1') rejectV1Mutation('channel', slug)
 
 	const {data, error} = await sdk.channels.updateChannel(channel.id, updates)
-	if (error) throw new Error(error)
+	if (error) throw error
 	return channelSchema.parse({...data, source: 'v2'})
 }
 
@@ -143,9 +143,9 @@ export async function deleteChannel(slug) {
 	const channel = await getChannel(slug)
 	if (channel.source === 'v1') rejectV1Mutation('channel', slug)
 
-	const {error} = await sdk.channels.deleteChannel(channel.id)
-	if (error) throw new Error(error)
-	return {success: true, slug}
+	const {data, error} = await sdk.channels.deleteChannel(channel.id)
+	if (error) throw error
+	return data
 }
 
 // ===== TRACK OPERATIONS =====
@@ -178,7 +178,7 @@ export async function listTracks(options = {}) {
 			await Promise.all(
 				channelSlugs.map(async (slug) => {
 					const {data, error} = await sdk.channels.readChannelTracks(slug)
-					if (error) throw new Error(error)
+					if (error) throw error
 					return data
 				})
 			)
@@ -228,7 +228,7 @@ export async function listTracks(options = {}) {
 export async function getTrack(id) {
 	try {
 		const {data, error} = await sdk.tracks.readTrack(id)
-		if (error) throw new Error(error)
+		if (error) throw error
 		return trackSchema.parse({...data, source: 'v2'})
 	} catch {
 		const track = (await loadV1Tracks()).find((tr) => tr.id === id)
@@ -245,7 +245,7 @@ export async function createTrack(data) {
 	if (!channelId) throw new Error('channel_id or channel slug required')
 
 	const {data: track, error} = await sdk.tracks.createTrack(channelId, data)
-	if (error) throw new Error(error)
+	if (error) throw error
 	return trackSchema.parse({...track, source: 'v2'})
 }
 
@@ -255,7 +255,7 @@ export async function updateTrack(id, updates) {
 	if (track.source === 'v1') rejectV1Mutation('track', id)
 
 	const {data, error} = await sdk.tracks.updateTrack(id, updates)
-	if (error) throw new Error(error)
+	if (error) throw error
 	return trackSchema.parse({...data, source: 'v2'})
 }
 
@@ -264,13 +264,12 @@ export async function deleteTrack(id) {
 	const track = await getTrack(id)
 	if (track.source === 'v1') rejectV1Mutation('track', id)
 
-	const {error} = await sdk.tracks.deleteTrack(id)
-	if (error) throw new Error(error)
-	return {success: true, id}
+	const {data, error} = await sdk.tracks.deleteTrack(id)
+	if (error) throw error
+	return data
 }
 
-// ===== SEARCH OPERATIONS =====
-
+/** @param {string} query */
 export async function searchChannels(query, options = {}) {
 	const v1Channels = await loadV1Channels()
 	const keys = ['slug', 'name', 'description']
@@ -287,7 +286,6 @@ export async function searchChannels(query, options = {}) {
 		fuzzysort
 			.go(query, v1Channels, {
 				keys,
-				threshold: options.threshold || -10000,
 				all: false,
 				limit: options.limit
 			})
@@ -319,7 +317,6 @@ export async function searchTracks(query, options = {}) {
 		fuzzysort
 			.go(query, v1Tracks, {
 				keys,
-				threshold: options.threshold || -10000,
 				all: false,
 				limit: options.limit
 			})

@@ -2,16 +2,33 @@ import {spawn} from 'node:child_process'
 import {existsSync, readFileSync} from 'node:fs'
 import {appendFile, mkdir, utimes, writeFile} from 'node:fs/promises'
 import ffmetadata from 'ffmetadata'
-import filenamify from 'filenamify'
 import getArtistTitle from 'get-artist-title'
 import {formatChannelText} from '../commands/channel/view.js'
 import {formatTrackText} from '../commands/track/list.js'
+import {toExtension, toFilename} from './filenames.js'
+import {createCloudinaryImageUrl} from './images.js'
 import pLimit from './p-limit-custom.js'
 
 /**
  * Download pipeline for Radio4000 tracks
  * Pure functional approach - each function does one thing well
+ *
+ * PUBLIC API (6 exports):
+ * - downloadChannel() - Main download orchestration
+ * - writeChannelAbout() - Write channel info file
+ * - writeChannelImageUrl() - Write image URL file
+ * - writeTracksPlaylist() - Write M3U playlist
+ * - toFilename() - Re-exported from filenames.js (used by tags)
+ * - toExtension() - Re-exported from filenames.js (used by tags)
+ *
+ * INTERNAL (3 functions - exported for testing, marked with @internal):
+ * - readFailedTrackIds() - Read previously failed track IDs
+ * - filterTracks() - Categorize tracks for download pipeline
+ * - writeFailures() - Append failures to JSONL file
  */
+
+// Re-export filename utilities for backwards compatibility
+export {toFilename, toExtension}
 
 // ============================================================================
 // Pipeline: Prepare → Filter → Download → Report
@@ -20,6 +37,7 @@ import pLimit from './p-limit-custom.js'
 /**
  * Read failed track IDs from failures.jsonl
  * Returns a Set of track IDs that previously failed to download
+ * @internal - exported for testing only
  */
 export function readFailedTrackIds(folderPath) {
 	const filepath = `${folderPath}/failures.jsonl`
@@ -56,7 +74,7 @@ export function readFailedTrackIds(folderPath) {
  * Prepare tracks with filesystem metadata
  * Enriches track objects with file paths and existence status
  */
-export function prepareTracks(tracks, folderPath) {
+function prepareTracks(tracks, folderPath) {
 	return tracks.map((track) => ({
 		...track,
 		filename: toFilename(track),
@@ -68,6 +86,7 @@ export function prepareTracks(tracks, folderPath) {
 /**
  * Filter tracks into download pipeline stages
  * Returns categorized track lists for reporting and processing
+ * @internal - exported for testing only
  */
 export function filterTracks(
 	tracks,
@@ -89,7 +108,7 @@ export function filterTracks(
  * Download a batch of tracks with progress reporting
  * Returns summary of successes and failures
  */
-export async function downloadBatch(tracks, folderPath, options = {}) {
+async function downloadBatch(tracks, folderPath, options = {}) {
 	const {
 		dryRun = false,
 		verbose = false,
@@ -236,7 +255,7 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
  * Download a single track using yt-dlp
  * Spawns yt-dlp process and handles output/errors
  */
-export async function downloadTrack(track, folderPath, {verbose = false} = {}) {
+async function downloadTrack(track, folderPath, {verbose = false} = {}) {
 	const filename = toFilename(track)
 	const extension = toExtension(track)
 
@@ -298,7 +317,7 @@ function spawnYtDlp(args, {verbose = false} = {}) {
  * Write metadata to downloaded track file
  * Extracts artist/title and embeds track description
  */
-export async function writeTrackMetadata(track, {verbose = false} = {}) {
+async function writeTrackMetadata(track, {verbose = false} = {}) {
 	if (!track.filepath || !existsSync(track.filepath)) {
 		throw new Error(`File not found: ${track.filepath}`)
 	}
@@ -340,7 +359,7 @@ export async function writeTrackMetadata(track, {verbose = false} = {}) {
  * Write track metadata as a .txt file
  * Uses the same text format as `r4 track list --format text`
  */
-export async function writeTrackMetadataFile(track, {verbose = false} = {}) {
+async function writeTrackMetadataFile(track, {verbose = false} = {}) {
 	if (!track.filepath) {
 		throw new Error('Track filepath required')
 	}
@@ -364,11 +383,7 @@ export async function writeTrackMetadataFile(track, {verbose = false} = {}) {
  * Set file timestamps to match track dates
  * Sets mtime to updated_at and atime to created_at
  */
-export async function setFileTimestamps(
-	filepath,
-	track,
-	{verbose = false} = {}
-) {
+async function setFileTimestamps(filepath, track, {verbose = false} = {}) {
 	if (!existsSync(filepath)) {
 		throw new Error(`File not found: ${filepath}`)
 	}
@@ -437,13 +452,12 @@ export async function writeChannelImageUrl(
 
 	let content = ''
 	if (channel.image) {
-		// If it's already a full URL (Cloudinary), use as-is
+		// If it's already a full URL, use as-is
 		if (channel.image.startsWith('http')) {
 			content = `${channel.image}\n`
 		} else {
-			// Otherwise construct Supabase storage URL
-			// Note: We'd need the supabase URL from config, for now just store the path
-			content = `${channel.image}\n`
+			// Construct full Cloudinary URL from ID
+			content = `${createCloudinaryImageUrl(channel.image)}\n`
 		}
 	}
 
@@ -486,6 +500,7 @@ export async function writeTracksPlaylist(
  * Write failures to failures.jsonl file
  * Each line is a JSON object with track and error info
  * JSONL format allows easy appending without parsing the whole file
+ * @internal - exported for testing only
  */
 export async function writeFailures(
 	failures,
@@ -527,78 +542,11 @@ export async function writeFailures(
 // ============================================================================
 
 /**
- * Extract YouTube video ID from URL
- * Supports various YouTube URL formats
- */
-export function extractYouTubeId(url) {
-	if (!url) return null
-
-	const patterns = [
-		/(?:youtube\.com\/\S*(?:(?:\/e(?:mbed))?\/|watch\/?\?(?:\S*?&?v=))|youtu\.be\/)([a-zA-Z0-9_-]{6,11})/
-	]
-
-	for (const pattern of patterns) {
-		const match = url.match(pattern)
-		if (match) return match[1]
-	}
-
-	return null
-}
-
-/**
- * Detect media provider from URL
- * Returns 'youtube', 'soundcloud', or null
- */
-export function detectMediaProvider(url) {
-	if (!url) return null
-	if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube'
-	if (url.includes('soundcloud.com')) return 'soundcloud'
-	return null
-}
-
-/**
- * Create safe filename from track (no path, no extension)
- * This is the canonical filename function
- * Format: "Track Title [youtube-id]"
- */
-export function toFilename(track) {
-	if (!track.title || typeof track.title !== 'string') {
-		throw new Error(`Invalid track title: ${JSON.stringify(track.title)}`)
-	}
-
-	// Sanitize title first
-	const cleanTitle = filenamify(track.title, {
-		maxLength: 180 // Leave room for ID suffix
-	})
-
-	// Add YouTube ID suffix if available (for uniqueness)
-	const ytId = extractYouTubeId(track.url)
-	if (ytId) {
-		return `${cleanTitle} [${ytId}]`
-	}
-
-	return cleanTitle
-}
-
-/**
- * Get file extension based on media provider
- * SoundCloud uses mp3, YouTube/others use m4a
- */
-export function toExtension(track) {
-	if (track.extension) {
-		return track.extension
-	}
-
-	const provider = detectMediaProvider(track.url)
-	return provider === 'soundcloud' ? 'mp3' : 'm4a'
-}
-
-/**
  * Create full filepath for track
  * Combines folder, filename, and extension
  * Places tracks in a 'tracks/' subfolder
  */
-export function toFilepath(track, folderPath) {
+function toFilepath(track, folderPath) {
 	const filename = toFilename(track)
 	const extension = toExtension(track)
 	return `${folderPath}/tracks/${filename}.${extension}`

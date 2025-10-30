@@ -3,6 +3,17 @@
  */
 
 /**
+ * SQL output option (for create/update/delete operations)
+ */
+export const sqlOption = {
+	sql: {
+		type: 'boolean',
+		description: 'Output as SQL statements',
+		default: false
+	}
+}
+
+/**
  * Format option with validation (for view/list operations)
  */
 export const formatOption = {

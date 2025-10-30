@@ -2,6 +2,8 @@ Hey we're making a new CLI in @cli/ using @cli-framework/ (which we adapt) to ou
 We want it to malleable, composable. Beautiful like lisp, haskell and elixir. 
 This is a CLI. Test it, use it with `r4`. Super for debugging. And if it can't debug it, we can extend it.
 
+Run the cli with `r4` (this is linked with `bun link` to ./cli/main.js). Remember you can pipe the outputs of each command. It's quite flexible.
+
 ## Architecture
 
 - **cli-framework/** - Reusable CLI framework (routing, parsing, validation)
@@ -12,17 +14,12 @@ This is a CLI. Test it, use it with `r4`. Super for debugging. And if it can't d
 
 
 ## Development
-
-### Testing
 ```bash
-bun run check (formats and lints)
-bun test
-```
-
-### Running the CLI
-```bash
-bun cli/index.js channel list --limit 10
-# If linked with `bun link`, just call it with `r4 help`
+bun install
+bun run check # formats and lints
+bun run test
+bun link
+r4 
 ```
 
 ### Principles 

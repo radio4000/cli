@@ -1,5 +1,6 @@
 import {sqlOption} from '../../lib/common-options.js'
 import {deleteChannel} from '../../lib/data.js'
+import {formatOutput} from '../../lib/formatters.js'
 
 /** @type {import('../../../cli-framework/types.js').CommandDefinition} */
 export default {
@@ -28,11 +29,8 @@ export default {
 		const results = await Promise.all(slugs.map((slug) => deleteChannel(slug)))
 		const format = input.sql ? 'sql' : 'json'
 		const data = results.length === 1 ? results[0] : results
-		return {
-			data,
-			format,
-			formatOptions: format === 'sql' ? {table: 'channels'} : undefined
-		}
+		const formatOptions = format === 'sql' ? {table: 'channels'} : undefined
+		return formatOutput(data, format, formatOptions)
 	},
 
 	examples: ['r4 channel delete mysounds', 'r4 channel delete ch1 ch2 ch3']

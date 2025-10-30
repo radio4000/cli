@@ -1,6 +1,5 @@
-import {z} from 'zod'
-import {sqlOption} from '../../lib/common-options.js'
 import {createTrack} from '../../lib/data.js'
+import {trackSchema} from '../../lib/schema.js'
 
 export default {
 	description: 'Create a new track',
@@ -20,30 +19,14 @@ export default {
 			type: 'string',
 			description: 'Track URL',
 			required: true
-		},
-		...sqlOption
+		}
 	},
 
-	validate: z.object({
-		channel: z.string().min(1),
-		title: z.string().min(1).max(500),
-		url: z.string().url()
-	}),
+	validate: trackSchema.pick({title: true, url: true}),
 
 	handler: async (input) => {
-		const trackData = {
-			slug: input.channel,
-			title: input.title,
-			url: input.url
-		}
-
-		const track = await createTrack(trackData)
-		const format = input.sql ? 'sql' : 'json'
-		return {
-			data: track,
-			format,
-			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
-		}
+		// Why: data.js createTrack expects 'slug' for channel identifier
+		return await createTrack({...input, slug: input.channel})
 	},
 
 	examples: [

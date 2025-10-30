@@ -1,5 +1,6 @@
 import {sqlOption} from '../../lib/common-options.js'
 import {updateTrack} from '../../lib/data.js'
+import {formatOutput} from '../../lib/formatters.js'
 
 export default {
 	description: 'Update one or more tracks',
@@ -28,11 +29,12 @@ export default {
 	handler: async (input) => {
 		const ids = Array.isArray(input.id) ? input.id : [input.id]
 
-		const updates = {}
-		if (input.title) updates.title = input.title
-		if (input.url) updates.url = input.url
+		const updates = {
+			title: input.title,
+			url: input.url
+		}
 
-		if (Object.keys(updates).length === 0) {
+		if (Object.values(updates).every((val) => val === undefined)) {
 			throw new Error('At least one field must be provided for update')
 		}
 
@@ -40,11 +42,8 @@ export default {
 
 		const format = input.sql ? 'sql' : 'json'
 		const data = tracks.length === 1 ? tracks[0] : tracks
-		return {
-			data,
-			format,
-			formatOptions: format === 'sql' ? {table: 'tracks'} : undefined
-		}
+		const formatOptions = format === 'sql' ? {table: 'tracks'} : undefined
+		return formatOutput(data, format, formatOptions)
 	},
 
 	examples: [
