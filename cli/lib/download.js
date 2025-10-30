@@ -5,6 +5,7 @@ import ffmetadata from 'ffmetadata'
 import getArtistTitle from 'get-artist-title'
 import {toExtension, toFilename} from './filenames.js'
 import {createCloudinaryImageUrl} from './images.js'
+import {extractYouTubeId} from './media.js'
 import pLimit from './p-limit-custom.js'
 import {formatChannelText, formatTrackText} from './text-formatters.js'
 
