@@ -11,13 +11,7 @@ import {CLIError, ErrorTypes, validateCommandDefinition} from './types.js'
  */
 async function loadCommand(commandPath) {
 	try {
-		const module = await import(`file://${commandPath}`)
-		const commandDef = module.default
-
-		if (!commandDef) {
-			throw new Error('Command file must export a default object')
-		}
-
+		const {default: commandDef} = await import(`file://${commandPath}`)
 		return validateCommandDefinition(commandDef)
 	} catch (error) {
 		throw new CLIError(
@@ -219,8 +213,7 @@ export async function listAllCommands(commandsDir, prefix = '') {
 				const command = await loadCommand(cmd.path)
 				result.push({
 					name: fullName,
-					description: command.description,
-					hidden: command.hidden || false
+					description: command.description
 				})
 			} catch (_error) {
 				// Skip commands that fail to load

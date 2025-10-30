@@ -21,21 +21,44 @@ bun test cli-framework/
 
 ## Quick Start
 
+**Create a command** (`commands/hello.js`):
+```javascript
+/** @type {import('./cli-framework/types.js').CommandDefinition} */
+export default {
+  description: 'Say hello',
+  args: [
+    { name: 'name', required: true, description: 'Your name' }
+  ],
+  handler: async (input) => {
+    return `Hello, ${input.name}!`
+  }
+}
+```
+
+**Execute it** (`main.js`):
 ```javascript
 import { executeCommand, listCommands, listAllCommands } from './cli-framework/index.js'
 
-/** @type {import('./types.js').CommandDefinition} */
-export default {
-  description: 'View channel details',
-  args: [{ name: 'slug', required: true }],
-  handler: async (input) => {
-    return await getChannel(input.slug);
-  }
-}
+const result = await executeCommand({
+  commandsDir: './commands',
+  argv: process.argv.slice(2),
+  context: {} // shared data passed to all handlers
+})
 
+console.log(result)
+```
+
+**Run it:**
+```bash
+node main.js hello world
+# => Hello, world!
+```
+
+**API:**
+```javascript
 await executeCommand({ commandsDir, argv, context })
-await listCommands(commandsDir) // not recursive
-await listAllCommands(commandsDir) // recursive
+await listCommands(commandsDir)     // top-level only
+await listAllCommands(commandsDir)  // recursive
 ```
 
 ## Command Definition
@@ -46,8 +69,8 @@ await listAllCommands(commandsDir) // recursive
 export default {
   description: 'Delete a channel',
   args: [
-    { name: 'slug', required: true },
-    { name: 'reason', required: false }
+    { name: 'slug', required: true, description: 'Channel slug' },
+    { name: 'reason', required: false, description: 'Deletion reason' }
   ],
   handler: async (input) => {
     // input.slug, input.reason
@@ -57,7 +80,9 @@ export default {
 
 **Multiple values:**
 ```javascript
-args: [{ name: 'slugs', required: true, multiple: true }]
+args: [
+  { name: 'slugs', required: true, multiple: true, description: 'Channel slugs' }
+]
 // CLI: r4 command slug1 slug2 slug3
 // input.slugs = ['slug1', 'slug2', 'slug3']
 ```
@@ -74,9 +99,8 @@ export default {
       default: false
     },
     limit: {
-      type: 'string',
-      description: 'Max results',
-      parse: (val) => parseInt(val, 10)
+      type: 'number',
+      description: 'Max results'
     },
     verbose: {
       type: 'boolean',
@@ -85,7 +109,25 @@ export default {
     }
   },
   handler: async (input) => {
-    // input.json, input.limit, input.verbose
+    // input.json (boolean)
+    // input.limit (number)
+    // input.verbose (boolean)
+  }
+}
+```
+
+**Supported types:**
+- `'boolean'` - true/false flags
+- `'string'` - text values
+- `'number'` - numeric values (auto-converted from strings)
+
+**Custom parsing:**
+```javascript
+options: {
+  date: {
+    type: 'string',
+    description: 'Date in YYYY-MM-DD format',
+    parse: (val) => new Date(val)
   }
 }
 ```
@@ -117,26 +159,35 @@ options: {
 
 ### Validation
 
-Use Zod schemas for type-safe validation:
+Use Zod schemas for runtime validation and type safety:
 
 ```javascript
 import { z } from 'zod'
 
 export default {
   description: 'Create channel',
-  args: [{ name: 'slug', required: true }],
+  args: [
+    { name: 'slug', required: true, description: 'Channel slug' }
+  ],
   options: {
-    tags: { type: 'string', multiple: true }
+    tags: {
+      type: 'string',
+      multiple: true,
+      description: 'Channel tags'
+    }
   },
   validate: z.object({
-    slug: z.string().min(3).max(50),
+    slug: z.string().min(3).max(50).regex(/^[a-z0-9-]+$/),
     tags: z.array(z.string()).optional()
   }),
   handler: async (input) => {
     // input is validated and typed
+    // TypeScript will infer types from the Zod schema
   }
 }
 ```
+
+The `validate` schema runs after argument/option parsing and throws a `CLIError` if validation fails.
 
 ## Examples
 

@@ -43,8 +43,7 @@ export const CommandSchema = z.object({
 	options: z.record(z.string(), OptionSchema).optional().default({}),
 	validate: z.unknown().optional(), // Zod schema for validation
 	handler: z.function(),
-	examples: z.array(z.string()).optional(),
-	hidden: z.boolean().optional().default(false) // hide from help
+	examples: z.array(z.string()).optional()
 })
 
 /**
