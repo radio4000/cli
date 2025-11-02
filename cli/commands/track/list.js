@@ -1,7 +1,6 @@
 import {listTracks} from '../../lib/data.js'
-import {formatJSON, formatSQL} from '../../lib/formatters.js'
+import {toJSON, trackToSQL} from '../../lib/formatters.js'
 import {filterTracksByTags} from '../../lib/tags.js'
-import {formatTrackText} from '../../lib/text-formatters.js'
 import {parse} from '../../utils.js'
 
 function formatTrackSummary(tracks, limit) {
@@ -16,7 +15,8 @@ function formatTrackSummary(tracks, limit) {
 		lines.push(`Showing ${showing} track${showing !== 1 ? 's' : ''}:`)
 
 		displayTracks.forEach((track) => {
-			lines.push(formatTrackText(track))
+			// Format single track inline (title + description + url)
+			lines.push(`${track.title}\n${track.description}\n  ${track.url}`)
 		})
 
 		if (totalCount > displayLimit) {
@@ -91,9 +91,9 @@ export default {
 			return formatTrackSummary(tracks, values.limit)
 		}
 		if (format === 'sql') {
-			return formatSQL(tracks, {table: 'tracks'})
+			return trackToSQL(tracks)
 		}
-		return formatJSON(tracks)
+		return toJSON(tracks)
 	},
 
 	examples: [

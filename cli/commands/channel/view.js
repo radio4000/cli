@@ -1,6 +1,5 @@
 import {getChannel} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
-import {formatChannelText} from '../../lib/text-formatters.js'
+import {channelToSQL, channelToText, toJSON} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
@@ -18,15 +17,11 @@ export default {
 		const slugs = positionals
 		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
 		const format = values.format || 'json'
-
-		// Custom text formatting for channels
-		if (format === 'text') {
-			return channels.map(formatChannelText).join('\n\n---\n\n')
-		}
-
-		// Use generic formatter for json/sql (unwrap if single result)
 		const data = channels.length === 1 ? channels[0] : channels
-		return formatOutput(data, format, {table: 'channels'})
+
+		if (format === 'sql') return channelToSQL(data)
+		if (format === 'text') return channelToText(data)
+		return toJSON(data)
 	},
 
 	examples: [

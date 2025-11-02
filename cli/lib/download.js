@@ -4,10 +4,14 @@ import {appendFile, mkdir, utimes, writeFile} from 'node:fs/promises'
 import ffmetadata from 'ffmetadata'
 import getArtistTitle from 'get-artist-title'
 import {toExtension, toFilename} from './filenames.js'
+import {channelToText, trackToText} from './formatters.js'
 import {createCloudinaryImageUrl} from './images.js'
 import {extractYouTubeId} from './media.js'
 import pLimit from './p-limit-custom.js'
-import {formatChannelText, formatTrackText} from './text-formatters.js'
+
+// Helper to format single channel/track (formatters handle arrays by default)
+const formatChannelText = (ch) => channelToText(ch)
+const formatTrackText = (tr) => trackToText(tr)
 
 /**
  * Download pipeline for Radio4000 tracks

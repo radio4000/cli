@@ -1,5 +1,5 @@
 import {getTrack} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
+import {toJSON, trackToSQL, trackToText} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
@@ -18,8 +18,10 @@ export default {
 		const tracks = await Promise.all(ids.map((id) => getTrack(id)))
 		const format = values.format || 'json'
 		const data = tracks.length === 1 ? tracks[0] : tracks
-		const formatOptions = format === 'sql' ? {table: 'tracks'} : undefined
-		return formatOutput(data, format, formatOptions)
+
+		if (format === 'sql') return trackToSQL(data)
+		if (format === 'text') return trackToText(data)
+		return toJSON(data)
 	},
 
 	examples: [

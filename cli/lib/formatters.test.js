@@ -1,89 +1,140 @@
 import {describe, expect, test} from 'bun:test'
 import {
-	formatJSON,
-	formatOutput,
-	formatPlainText,
-	formatSQL
+	channelToSQL,
+	channelToText,
+	toJSON,
+	trackToSQL,
+	trackToText
 } from './formatters.js'
 
-describe('formatJSON', () => {
-	test('formats objects with pretty and compact modes', () => {
+describe('toJSON', () => {
+	test('formats any data as pretty JSON', () => {
 		const data = {name: 'test', value: 42}
-		expect(formatJSON(data)).toBe('{\n  "name": "test",\n  "value": 42\n}')
-		expect(formatJSON(data, {pretty: false})).toBe('{"name":"test","value":42}')
-		expect(formatJSON(null)).toBe('null')
+		expect(toJSON(data)).toBe('{\n  "name": "test",\n  "value": 42\n}')
+		expect(toJSON(null)).toBe('null')
+		expect(toJSON([1, 2, 3])).toBe('[\n  1,\n  2,\n  3\n]')
 	})
 })
 
-describe('formatSQL', () => {
-	test('formats single and multiple objects as INSERT statements', () => {
-		const single = {id: 1, name: 'test', active: true}
-		const result = formatSQL(single, {table: 'users'})
-		expect(result).toContain('INSERT INTO users')
-		expect(result).toContain("1, 'test', TRUE")
+describe('channelToSQL', () => {
+	test('formats single channel as INSERT', () => {
+		const channel = {
+			id: '1',
+			slug: 'test',
+			name: 'Test Channel',
+			description: 'A test'
+		}
+		const result = channelToSQL(channel)
+		expect(result).toContain('INSERT INTO channels')
+		expect(result).toContain('slug')
+		expect(result).toContain("'test'")
+	})
 
-		const multiple = [
-			{id: 1, name: 'Alice'},
-			{id: 2, name: 'Bob'}
+	test('formats multiple channels as multiple INSERTs', () => {
+		const channels = [
+			{id: '1', slug: 'ch1', name: 'Channel 1'},
+			{id: '2', slug: 'ch2', name: 'Channel 2'}
 		]
-		const result2 = formatSQL(multiple, {table: 'users'})
-		expect(result2.split('\n')).toHaveLength(2)
+		const result = channelToSQL(channels)
+		const statements = result.split('\n')
+		expect(statements).toHaveLength(2)
+		expect(result).toContain('ch1')
+		expect(result).toContain('ch2')
 	})
 
-	test('handles various SQL value types', () => {
-		const data = {str: "O'Brien", num: 42, bool: true, nil: null}
-		const result = formatSQL(data)
-		expect(result).toContain("'O''Brien'") // escaped quotes
-		expect(result).toContain('42')
-		expect(result).toContain('TRUE')
-		expect(result).toContain('NULL')
-	})
-
-	test('handles edge cases', () => {
-		expect(formatSQL([])).toBe('-- No data to insert')
-		expect(formatSQL({id: 1})).toContain('INSERT INTO data') // default table
-	})
-})
-
-describe('formatPlainText', () => {
-	test('formats primitives', () => {
-		expect(formatPlainText('hello')).toBe('hello')
-		expect(formatPlainText(42)).toBe('42')
-		expect(formatPlainText(true)).toBe('true')
-		expect(formatPlainText(null)).toBe('')
-	})
-
-	test('formats objects and arrays', () => {
-		const obj = {name: 'test', value: 42}
-		expect(formatPlainText(obj)).toContain('name: test')
-		expect(formatPlainText(obj)).toContain('value: 42')
-
-		expect(formatPlainText(['a', 'b', 'c'])).toBe('a\nb\nc')
-	})
-
-	test('formats nested structures with indentation', () => {
-		const data = {user: {name: 'Alice', age: 30}}
-		const result = formatPlainText(data)
-		expect(result).toContain('user:')
-		expect(result).toContain('  name: Alice')
+	test('escapes SQL values correctly', () => {
+		const channel = {
+			id: '1',
+			slug: 'test',
+			name: "O'Brien's Channel"
+		}
+		const result = channelToSQL(channel)
+		expect(result).toContain("'O''Brien''s Channel'")
 	})
 })
 
-describe('formatOutput', () => {
-	const testData = {name: 'test', value: 42}
-
-	test('routes to correct formatter with options', () => {
-		expect(formatOutput(testData)).toContain('"name": "test"') // defaults to json
-		expect(formatOutput(testData, 'json', {pretty: false})).toBe(
-			'{"name":"test","value":42}'
-		)
-		expect(formatOutput(testData, 'sql', {table: 'test'})).toContain(
-			'INSERT INTO test'
-		)
-		expect(formatOutput(testData, 'text')).toContain('name: test')
+describe('trackToSQL', () => {
+	test('formats single track as INSERT', () => {
+		const track = {
+			id: '1',
+			title: 'Test Track',
+			url: 'https://example.com',
+			tags: ['ambient', 'jazz']
+		}
+		const result = trackToSQL(track)
+		expect(result).toContain('INSERT INTO tracks')
+		expect(result).toContain('title')
+		expect(result).toContain("'Test Track'")
 	})
 
-	test('throws for unknown format', () => {
-		expect(() => formatOutput(testData, 'xml')).toThrow('Unknown output format')
+	test('formats array tags as JSON string', () => {
+		const track = {
+			id: '1',
+			title: 'Test',
+			url: 'https://example.com',
+			tags: ['tag1', 'tag2']
+		}
+		const result = trackToSQL(track)
+		expect(result).toContain('["tag1","tag2"]')
+	})
+
+	test('handles multiple tracks', () => {
+		const tracks = [
+			{id: '1', title: 'Track 1', url: 'http://1.com'},
+			{id: '2', title: 'Track 2', url: 'http://2.com'}
+		]
+		const result = trackToSQL(tracks)
+		expect(result.split('\n')).toHaveLength(2)
+	})
+})
+
+describe('channelToText', () => {
+	test('formats single channel as human-readable text', () => {
+		const channel = {
+			id: '1',
+			slug: 'test',
+			name: 'Test Channel',
+			description: 'A test channel',
+			created_at: '2024-01-01T00:00:00Z'
+		}
+		const result = channelToText(channel)
+		expect(result).toContain('Test Channel')
+		expect(result).toContain('A test channel')
+		expect(result).toContain('Slug: test')
+	})
+
+	test('formats multiple channels with separator', () => {
+		const channels = [
+			{id: '1', slug: 'ch1', name: 'Channel 1', description: 'First'},
+			{id: '2', slug: 'ch2', name: 'Channel 2', description: 'Second'}
+		]
+		const result = channelToText(channels)
+		expect(result).toContain('Channel 1')
+		expect(result).toContain('Channel 2')
+		expect(result).toContain('---') // separator
+	})
+})
+
+describe('trackToText', () => {
+	test('formats single track as title + description + url', () => {
+		const track = {
+			title: 'Amazing Song',
+			description: 'Very nice',
+			url: 'https://example.com/track'
+		}
+		const result = trackToText(track)
+		expect(result).toContain('Amazing Song')
+		expect(result).toContain('Very nice')
+		expect(result).toContain('https://example.com/track')
+	})
+
+	test('formats multiple tracks', () => {
+		const tracks = [
+			{title: 'Song 1', description: 'First', url: 'http://1.com'},
+			{title: 'Song 2', description: 'Second', url: 'http://2.com'}
+		]
+		const result = trackToText(tracks)
+		expect(result).toContain('Song 1')
+		expect(result).toContain('Song 2')
 	})
 })

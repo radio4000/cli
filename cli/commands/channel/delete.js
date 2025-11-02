@@ -1,5 +1,5 @@
 import {deleteChannel} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
+import {channelToSQL, toJSON} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
@@ -21,10 +21,10 @@ export default {
 
 		const slugs = positionals
 		const results = await Promise.all(slugs.map((slug) => deleteChannel(slug)))
-		const format = values.sql ? 'sql' : 'json'
 		const data = results.length === 1 ? results[0] : results
-		const formatOptions = format === 'sql' ? {table: 'channels'} : undefined
-		return formatOutput(data, format, formatOptions)
+
+		if (values.sql) return channelToSQL(data)
+		return toJSON(data)
 	},
 
 	examples: [

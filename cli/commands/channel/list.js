@@ -1,5 +1,5 @@
 import {listChannels} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
+import {channelToSQL, channelToText, toJSON} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
@@ -14,7 +14,10 @@ export default {
 		const limit = values.limit ?? 100
 		const channels = await listChannels({limit})
 		const format = values.format || 'json'
-		return formatOutput(channels, format, {table: 'channels'})
+
+		if (format === 'sql') return channelToSQL(channels)
+		if (format === 'text') return channelToText(channels)
+		return toJSON(channels)
 	},
 
 	examples: [

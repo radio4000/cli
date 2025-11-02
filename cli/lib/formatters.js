@@ -1,24 +1,17 @@
 /**
- * Output formatters for CLI commands
- * Commands return raw data, framework handles formatting
+ * Formatters for R4 channels and tracks
+ * Schema-aware serialization to JSON, SQL, and human-readable text
  */
 
 /**
- * Format as JSON
- * @param {any} data - Data to format
- * @param {Object} options - Format options
- * @param {boolean} options.pretty - Pretty print JSON (default: true)
- * @returns {string} Formatted JSON string
+ * Format any data as JSON
  */
-export function formatJSON(data, {pretty = true} = {}) {
-	if (pretty) return JSON.stringify(data, null, 2)
-	return JSON.stringify(data)
+export function toJSON(data) {
+	return JSON.stringify(data, null, 2)
 }
 
 /**
- * Escape string value for SQL
- * @param {any} value - Value to escape
- * @returns {string} Escaped SQL value
+ * Escape value for SQL
  */
 function escapeSQLValue(value) {
 	if (value === null || value === undefined) {
@@ -33,31 +26,29 @@ function escapeSQLValue(value) {
 		return value ? 'TRUE' : 'FALSE'
 	}
 
+	if (Array.isArray(value)) {
+		// Handle arrays (like tags) as JSON strings
+		return `'${JSON.stringify(value).replace(/'/g, "''")}'`
+	}
+
 	// String escaping - escape single quotes
 	const str = String(value)
 	return `'${str.replace(/'/g, "''")}'`
 }
 
 /**
- * Format as SQL INSERT statements
- * @param {Array|Object} data - Data to format
- * @param {Object} options - Format options
- * @param {string} options.table - Table name for INSERT statements
- * @returns {string} SQL INSERT statements
+ * Generate SQL INSERT statements from data
  */
-export function formatSQL(data, {table = 'data'} = {}) {
-	// Handle single object
-	if (!Array.isArray(data)) {
-		data = [data]
-	}
+function generateSQL(data, table) {
+	const items = Array.isArray(data) ? data : [data]
 
-	if (data.length === 0) {
+	if (items.length === 0) {
 		return '-- No data to insert'
 	}
 
 	// Get all unique columns from all objects
 	const columns = new Set()
-	for (const row of data) {
+	for (const row of items) {
 		if (typeof row === 'object' && row !== null) {
 			for (const key of Object.keys(row)) {
 				columns.add(key)
@@ -73,8 +64,7 @@ export function formatSQL(data, {table = 'data'} = {}) {
 
 	// Generate INSERT statements
 	const statements = []
-
-	for (const row of data) {
+	for (const row of items) {
 		if (typeof row !== 'object' || row === null) {
 			continue
 		}
@@ -88,65 +78,73 @@ export function formatSQL(data, {table = 'data'} = {}) {
 }
 
 /**
- * Format as plain text (simple key-value pairs)
- * @param {any} data - Data to format
- * @returns {string} Plain text representation
+ * Format channel(s) as SQL INSERT statements
+ * Handles single channel or array of channels
  */
-export function formatPlainText(data) {
-	if (typeof data === 'string') {
-		return data
-	}
-
-	if (typeof data === 'number' || typeof data === 'boolean') {
-		return String(data)
-	}
-
-	if (data === null || data === undefined) {
-		return ''
-	}
-
-	if (Array.isArray(data)) {
-		return data.map((item) => formatPlainText(item)).join('\n')
-	}
-
-	if (typeof data === 'object') {
-		const lines = []
-		for (const [key, value] of Object.entries(data)) {
-			if (typeof value === 'object' && value !== null) {
-				lines.push(`${key}:`)
-				const nested = formatPlainText(value)
-				lines.push(
-					nested
-						.split('\n')
-						.map((line) => `  ${line}`)
-						.join('\n')
-				)
-			} else {
-				lines.push(`${key}: ${value}`)
-			}
-		}
-		return lines.join('\n')
-	}
-
-	return String(data)
+export function channelToSQL(data) {
+	return generateSQL(data, 'channels')
 }
 
 /**
- * Format data according to specified format
- * @param {any} data - Data to format
- * @param {string} format - Format type ('json', 'sql', 'text')
- * @param {Object} options - Format-specific options
- * @returns {string} Formatted output
+ * Format track(s) as SQL INSERT statements
+ * Handles single track or array of tracks
  */
-export function formatOutput(data, format = 'json', options = {}) {
-	switch (format) {
-		case 'json':
-			return formatJSON(data, options)
-		case 'sql':
-			return formatSQL(data, options)
-		case 'text':
-			return formatPlainText(data)
-		default:
-			throw new Error(`Unknown output format: ${format}`)
-	}
+export function trackToSQL(data) {
+	return generateSQL(data, 'tracks')
+}
+
+/**
+ * Format a single channel as human-readable text
+ */
+function formatChannelText(channel) {
+	const title = channel.name || 'Untitled Channel'
+
+	const optional = [
+		channel.url && `Website: ${channel.url}`,
+		channel.image && `Image: ${channel.image}`,
+		channel.latitude !== undefined && `Latitude: ${channel.latitude}`,
+		channel.longitude !== undefined && `Longitude: ${channel.longitude}`,
+		channel.track_count !== undefined && `Tracks: ${channel.track_count}`,
+		channel.firebase_id && `Firebase ID: ${channel.firebase_id}`
+	]
+		.filter(Boolean)
+		.join('\n  ')
+
+	return `${title}
+${'='.repeat(title.length)}
+
+${channel.description}
+
+Info:
+  ID: ${channel.id || 'N/A'}
+  Slug: ${channel.slug}
+  Source: ${channel.source || 'N/A'}
+  Created: ${channel.created_at ? new Date(channel.created_at).toLocaleDateString() : 'Unknown'}
+  Updated: ${channel.updated_at ? new Date(channel.updated_at).toLocaleDateString() : 'Unknown'}
+${optional ? `  ${optional}\n` : ''}`
+}
+
+/**
+ * Format channel(s) as human-readable text
+ * Handles single channel or array of channels
+ */
+export function channelToText(data) {
+	const channels = Array.isArray(data) ? data : [data]
+	return channels.map(formatChannelText).join('\n\n---\n\n')
+}
+
+/**
+ * Format a single track as human-readable text
+ */
+function formatTrackText(track) {
+	return `${track.title}\n${track.description}\n  ${track.url}`
+}
+
+/**
+ * Format track(s) as human-readable text
+ * Handles single track or array of tracks
+ */
+export function trackToText(data) {
+	const tracks = Array.isArray(data) ? data : [data]
+	return tracks.map(formatTrackText).join('\n')
 }
