@@ -54,7 +54,23 @@ export async function route(argv) {
 		throw new Error(`Unknown command: ${commandPath.slice(0, i + 1).join(' ')}`)
 	}
 
-	// Reached end without finding a .js file
+	// Reached end without finding a .js file - list available subcommands
+	const subcommands = await listAllCommands(currentDir, '')
+	if (subcommands.length > 0) {
+		const commandPrefix = commandPath.join(' ')
+		const lines = []
+		lines.push(`Unknown or incomplete command: '${commandPrefix}'\n`)
+		lines.push(`Available ${commandPrefix} commands:\n`)
+		for (const sub of subcommands) {
+			const fullCmd = `r4 ${commandPrefix} ${sub.name}`.padEnd(30)
+			const desc = sub.description || 'No description'
+			lines.push(`  ${fullCmd} ${desc}`)
+		}
+		lines.push(
+			`\nUse 'r4 ${commandPrefix} <command> --help' for more information`
+		)
+		throw new Error(lines.join('\n'))
+	}
 	throw new Error(`'${commandPath.join(' ')}' requires a subcommand`)
 }
 

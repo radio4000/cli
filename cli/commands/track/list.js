@@ -44,7 +44,7 @@ export default {
 			tag: {type: 'string', multiple: true},
 			'match-all': {type: 'boolean', default: false},
 			limit: {type: 'number'},
-			format: {type: 'string', default: 'text'}
+			format: {type: 'string'}
 		})
 
 		if (!values.channel || values.channel.length === 0) {
@@ -54,7 +54,11 @@ export default {
 		const channelSlugs = Array.isArray(values.channel)
 			? values.channel
 			: [values.channel]
-		const format = values.format || 'text'
+
+		// Default to text for TTY (human), json when piped (machine)
+		const isTTY = Boolean(process.stdout.isTTY)
+		const format = values.format || (isTTY ? 'text' : 'json')
+
 		const tags = values.tag
 			? Array.isArray(values.tag)
 				? values.tag

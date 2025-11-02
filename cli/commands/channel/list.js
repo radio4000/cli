@@ -13,7 +13,10 @@ export default {
 
 		const limit = values.limit ?? 100
 		const channels = await listChannels({limit})
-		const format = values.format || 'json'
+
+		// Default to text for TTY (human), json when piped (machine)
+		const isTTY = Boolean(process.stdout.isTTY)
+		const format = values.format || (isTTY ? 'text' : 'json')
 
 		if (format === 'sql') return channelToSQL(channels)
 		if (format === 'text') return channelToText(channels)

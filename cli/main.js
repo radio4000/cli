@@ -18,8 +18,16 @@ async function main() {
 		}
 
 		const result = await cmd.run(commandArgv)
-		if (result) console.log(result)
-		process.exit(0)
+		if (result) {
+			// Write result and ensure stdout is flushed before exit
+			// This prevents truncation when output exceeds buffer size (e.g., large JSON)
+			process.stdout.write(result)
+			process.stdout.write('\n', () => {
+				process.exit(0)
+			})
+		} else {
+			process.exit(0)
+		}
 	} catch (error) {
 		console.error(error.message)
 		process.exit(1)
