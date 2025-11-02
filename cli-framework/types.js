@@ -71,8 +71,7 @@ export const ErrorTypes = {
 	MISSING_ARGUMENT: 'missing_argument',
 	INVALID_ARGUMENT: 'invalid_argument',
 	HANDLER_ERROR: 'handler_error',
-	INVALID_COMMAND_DEFINITION: 'invalid_command_definition',
-	HELP_REQUESTED: 'help_requested'
+	INVALID_COMMAND_DEFINITION: 'invalid_command_definition'
 }
 
 /**

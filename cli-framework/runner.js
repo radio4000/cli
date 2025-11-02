@@ -78,15 +78,6 @@ function parseOptionValues(optionDefs, values) {
 			)
 		}
 
-		// For required boolean options, ensure the value is true
-		if (def.required && def.type === 'boolean' && hasValue && value !== true) {
-			throw new CLIError(
-				ErrorTypes.INVALID_ARGUMENT,
-				`Option --${name} must be true (received: ${value})`,
-				{option: name, value, definition: def}
-			)
-		}
-
 		// Use default if not provided
 		if (!hasValue) {
 			if (def.default !== undefined) {
@@ -181,22 +172,11 @@ function buildParseArgsOptions(optionDefs) {
  */
 export async function runCommand(command, argv = [], context = {}) {
 	try {
-		// Check for help flags early, before validation
-		if (argv.includes('--help') || argv.includes('-h')) {
-			// Return a special signal that help was requested
-			// The caller should handle showing help
-			throw new CLIError(ErrorTypes.HELP_REQUESTED, 'Help requested', {
-				command,
-				commandName: context.commandName
-			})
-		}
-
 		// Parse flags using Node.js built-in parseArgs
 		const parseArgsOptions = buildParseArgsOptions(command.options)
 		const {values, positionals} = parseArgs({
 			args: argv,
 			options: parseArgsOptions,
-			strict: false, // allow unknown options for now
 			allowPositionals: true
 		})
 

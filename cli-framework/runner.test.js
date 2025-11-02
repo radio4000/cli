@@ -334,30 +334,6 @@ describe('runCommand - Options (Flags)', () => {
 		expect(result).toEqual({confirm: true})
 	})
 
-	test('rejects required boolean option when explicitly false', async () => {
-		const command = {
-			description: 'Test',
-			args: [],
-			options: {
-				confirm: {
-					type: 'boolean',
-					description: 'Confirm action',
-					required: true
-				}
-			},
-			handler: async () => {}
-		}
-
-		try {
-			await runCommand(command, ['--confirm=false'])
-			expect(true).toBe(false) // should not reach
-		} catch (error) {
-			expect(error).toBeInstanceOf(CLIError)
-			expect(error.type).toBe(ErrorTypes.INVALID_ARGUMENT)
-			expect(error.message).toContain('Option --confirm must be true')
-		}
-	})
-
 	test('required option takes precedence over default', async () => {
 		// If an option is both required and has a default,
 		// the required validation should still trigger

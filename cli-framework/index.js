@@ -54,13 +54,11 @@ async function discoverCommands(commandsDir) {
  * Route command path to filesystem location
  * @param {string} commandsDir - Root commands directory
  * @param {Array<string>} commandPath - Command path segments (e.g., ['channel', 'view'])
- * @returns {Promise<{commandFile: string, remainingArgs: Array<string>}>}
+ * @returns {Promise<{commandFile: string, consumedSegments: number}>}
  */
 async function routeCommand(commandsDir, commandPath) {
 	if (commandPath.length === 0) {
-		throw new CLIError(ErrorTypes.UNKNOWN_COMMAND, 'No command specified', {
-			available: await discoverCommands(commandsDir)
-		})
+		throw new CLIError(ErrorTypes.UNKNOWN_COMMAND, 'No command specified')
 	}
 
 	let currentDir = commandsDir
@@ -74,10 +72,9 @@ async function routeCommand(commandsDir, commandPath) {
 
 		// Check if there's a file at this level
 		if (existsSync(nextFile)) {
-			consumedPath.push(segment)
 			return {
 				commandFile: nextFile,
-				remainingArgs: commandPath.slice(i + 1)
+				consumedSegments: i + 1
 			}
 		}
 
@@ -94,22 +91,17 @@ async function routeCommand(commandsDir, commandPath) {
 		}
 
 		// No file or directory found - command doesn't exist
-		const available = await discoverCommands(currentDir)
 		const unknownCommand = consumedPath.concat(segment).join(' ')
 		throw new CLIError(
 			ErrorTypes.UNKNOWN_COMMAND,
-			`Unknown command: ${unknownCommand}`,
-			{segment, available, unknownCommand}
+			`Unknown command: ${unknownCommand}`
 		)
 	}
 
 	// Reached end of path without finding a command file
-	// This means they specified a directory but not a specific command
-	const available = await discoverCommands(currentDir)
 	throw new CLIError(
 		ErrorTypes.UNKNOWN_COMMAND,
-		`'${consumedPath.join(' ')}' requires a subcommand`,
-		{available, commandPath: consumedPath.join(' ')}
+		`'${consumedPath.join(' ')}' requires a subcommand`
 	)
 }
 
@@ -134,13 +126,13 @@ export async function executeCommand({commandsDir, argv, context = {}}) {
 	const remainingArgv = argv.slice(commandPath.length)
 
 	// Route to command file
-	const {commandFile, remainingArgs} = await routeCommand(
+	const {commandFile, consumedSegments} = await routeCommand(
 		resolvedCommandsDir,
 		commandPath
 	)
 
-	// Combine remaining path args with flags/options
-	const commandArgv = [...remainingArgs, ...remainingArgv]
+	// Build argv: remaining command path segments + flags/options
+	const commandArgv = [...commandPath.slice(consumedSegments), ...remainingArgv]
 
 	// Load and validate command
 	const command = await loadCommand(commandFile)
