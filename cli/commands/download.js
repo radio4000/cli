@@ -132,6 +132,7 @@ export default {
 		'r4 download ko002 --force',
 		'r4 download ko002 --retry-failed',
 		'r4 download ko002 --no-metadata',
-		'r4 download ko002 --concurrency 5'
+		'r4 download ko002 --concurrency 5',
+		'mpv ko002/tracks.m3u'
 	]
 }

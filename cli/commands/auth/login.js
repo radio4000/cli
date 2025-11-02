@@ -36,7 +36,7 @@ export default {
 
 			// Step 1: Send OTP
 			console.error(`Sending verification code to ${email}`)
-			const {error: otpError} = await sdk.auth.signInWithOtp({
+			const {error: otpError} = await sdk.supabase.auth.signInWithOtp({
 				email,
 				options: {shouldCreateUser: false}
 			})
@@ -61,7 +61,7 @@ export default {
 
 			// Step 3: Verify OTP
 			console.error('Verifying code...')
-			const {data: verifyData, error: verifyError} = await sdk.auth.verifyOtp({
+			const {data: verifyData, error: verifyError} = await sdk.supabase.auth.verifyOtp({
 				email,
 				token: trimmedCode,
 				type: 'email'
