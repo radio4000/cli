@@ -1,16 +1,9 @@
 import {getChannel, listTracks} from '../../lib/data.js'
 import {getUniqueTags} from '../../lib/tags.js'
+import {parse} from '../../utils.js'
 
 export default {
 	description: 'List all tags from a channel',
-
-	args: [
-		{
-			name: 'slug',
-			description: 'Channel slug to list tags from',
-			required: true
-		}
-	],
 
 	options: {
 		sorted: {
@@ -33,12 +26,18 @@ export default {
 		}
 	},
 
-	handler: async (input) => {
-		const {slug} = input
-		const sorted = input.sorted
-		const limit = input.limit
-		const minCount = input['min-count'] || 1
-		const format = input.format || 'text'
+	async run(argv) {
+		const {values, positionals} = parse(argv, this.options)
+
+		if (positionals.length === 0) {
+			throw new Error('Channel slug is required')
+		}
+
+		const slug = positionals[0]
+		const sorted = values.sorted
+		const limit = values.limit
+		const minCount = values['min-count'] || 1
+		const format = values.format || 'text'
 
 		// Get channel and tracks
 		const channel = await getChannel(slug)

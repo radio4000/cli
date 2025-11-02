@@ -1,49 +1,47 @@
-import {sqlOption} from '../../lib/common-options.js'
 import {updateTrack} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
+import {toJSON, trackToSQL} from '../../lib/formatters.js'
+import {parse} from '../../utils.js'
 
 export default {
 	description: 'Update one or more tracks',
 
-	args: [
-		{
-			name: 'id',
-			description: 'Track ID(s) to update',
-			required: true,
-			multiple: true
-		}
-	],
-
 	options: {
 		title: {
 			type: 'string',
-			description: 'New track title'
+			description: 'New title for the track(s)'
 		},
 		url: {
 			type: 'string',
-			description: 'New track URL'
+			description: 'New URL for the track(s)'
 		},
-		...sqlOption
+		sql: {
+			type: 'boolean',
+			description: 'Output result as SQL INSERT statements'
+		}
 	},
 
-	handler: async (input) => {
-		const ids = Array.isArray(input.id) ? input.id : [input.id]
+	async run(argv) {
+		const {values, positionals} = parse(argv, this.options)
+
+		if (positionals.length === 0) {
+			throw new Error('At least one track ID is required')
+		}
 
 		const updates = {
-			title: input.title,
-			url: input.url
+			title: values.title,
+			url: values.url
 		}
 
 		if (Object.values(updates).every((val) => val === undefined)) {
 			throw new Error('At least one field must be provided for update')
 		}
 
+		const ids = positionals
 		const tracks = await Promise.all(ids.map((id) => updateTrack(id, updates)))
-
-		const format = input.sql ? 'sql' : 'json'
 		const data = tracks.length === 1 ? tracks[0] : tracks
-		const formatOptions = format === 'sql' ? {table: 'tracks'} : undefined
-		return formatOutput(data, format, formatOptions)
+
+		if (values.sql) return trackToSQL(data)
+		return toJSON(data)
 	},
 
 	examples: [

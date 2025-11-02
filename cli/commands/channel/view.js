@@ -1,35 +1,32 @@
-import {formatOption} from '../../lib/common-options.js'
 import {getChannel} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
-import {formatChannelText} from '../../lib/text-formatters.js'
+import {channelToSQL, channelToText, toJSON} from '../../lib/formatters.js'
+import {parse} from '../../utils.js'
 
 export default {
 	description: 'View detailed information about one or more channels',
 
-	args: [
-		{
-			name: 'slug',
-			description: 'Channel slug(s) to view',
-			required: true,
-			multiple: true
+	options: {
+		format: {
+			type: 'string',
+			description: 'Output format: json, sql, text (default: json)'
 		}
-	],
+	},
 
-	options: formatOption,
+	async run(argv) {
+		const {values, positionals} = parse(argv, this.options)
 
-	handler: async (input) => {
-		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
+		if (positionals.length === 0) {
+			throw new Error('At least one channel slug is required')
+		}
+
+		const slugs = positionals
 		const channels = await Promise.all(slugs.map((slug) => getChannel(slug)))
-		const format = input.format || 'json'
-
-		// Custom text formatting for channels
-		if (format === 'text') {
-			return channels.map(formatChannelText).join('\n\n---\n\n')
-		}
-
-		// Use generic formatter for json/sql (unwrap if single result)
+		const format = values.format || 'json'
 		const data = channels.length === 1 ? channels[0] : channels
-		return formatOutput(data, format, {table: 'channels'})
+
+		if (format === 'sql') return channelToSQL(data)
+		if (format === 'text') return channelToText(data)
+		return toJSON(data)
 	},
 
 	examples: [

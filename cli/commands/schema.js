@@ -1,14 +1,15 @@
 import {channelSQL, trackSQL} from '../lib/schema.js'
+import {parse} from '../utils.js'
 
 const schemas = {
 	channels: channelSQL,
 	tracks: trackSQL
 }
 
-const selectSchemas = (input) => {
+const selectSchemas = (values) => {
 	const all = Object.keys(schemas)
 	const selected =
-		input.channels || input.tracks ? all.filter((k) => input[k]) : all
+		values.channels || values.tracks ? all.filter((k) => values[k]) : all
 	return selected.map((k) => schemas[k])
 }
 
@@ -18,15 +19,19 @@ export default {
 	options: {
 		channels: {
 			type: 'boolean',
-			description: 'Output only channels schema'
+			description: 'Output only channels table schema'
 		},
 		tracks: {
 			type: 'boolean',
-			description: 'Output only tracks schema'
+			description: 'Output only tracks table schema'
 		}
 	},
 
-	handler: async (input) => selectSchemas(input).join('\n\n'),
+	async run(argv) {
+		const {values} = parse(argv, this.options)
+
+		return selectSchemas(values).join('\n\n')
+	},
 
 	examples: [
 		'r4 schema',

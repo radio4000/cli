@@ -1,15 +1,11 @@
-import {dirname} from 'node:path'
-import {fileURLToPath} from 'node:url'
-import {listAllCommands} from '../../cli-framework/index.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
+import {listAllCommands} from '../utils.js'
 
 export default {
 	description: 'Show help information',
 
-	handler: async () => {
+	async run() {
 		// Auto-discover all commands recursively from filesystem
-		const allCommands = await listAllCommands(__dirname)
+		const allCommands = await listAllCommands()
 
 		// Group commands by category (directory structure)
 		const groups = {}

@@ -1,25 +1,35 @@
-import {formatOption} from '../../lib/common-options.js'
 import {listChannels} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
+import {channelToSQL, channelToText, toJSON} from '../../lib/formatters.js'
+import {parse} from '../../utils.js'
 
-/** @type {import('../../../cli-framework/types.js').CommandDefinition} */
 export default {
 	description: 'List all channels (from v2 API or bundled v1 data)',
 
 	options: {
 		limit: {
 			type: 'number',
-			description: 'Limit number of results (default: 100)',
-			default: 100
+			default: 100,
+			description: 'Limit number of results'
 		},
-		...formatOption
+		format: {
+			type: 'string',
+			description: 'Output format: text, json, sql (auto: tty=text, pipe=json)'
+		}
 	},
 
-	handler: async (input) => {
-		const limit = input.limit ?? 100
+	async run(argv) {
+		const {values} = parse(argv, this.options)
+
+		const limit = values.limit ?? 100
 		const channels = await listChannels({limit})
-		const format = input.format || 'json'
-		return formatOutput(channels, format, {table: 'channels'})
+
+		// Default to text for TTY (human), json when piped (machine)
+		const isTTY = Boolean(process.stdout.isTTY)
+		const format = values.format || (isTTY ? 'text' : 'json')
+
+		if (format === 'sql') return channelToSQL(channels)
+		if (format === 'text') return channelToText(channels)
+		return toJSON(channels)
 	},
 
 	examples: [

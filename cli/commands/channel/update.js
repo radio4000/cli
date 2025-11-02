@@ -1,56 +1,54 @@
-import {sqlOption} from '../../lib/common-options.js'
 import {updateChannel} from '../../lib/data.js'
-import {formatOutput} from '../../lib/formatters.js'
+import {channelToSQL, toJSON} from '../../lib/formatters.js'
+import {parse} from '../../utils.js'
 
 export default {
 	description: 'Update one or more channels',
 
-	args: [
-		{
-			name: 'slug',
-			description: 'Channel slug(s) to update',
-			required: true,
-			multiple: true
-		}
-	],
-
 	options: {
 		name: {
 			type: 'string',
-			description: 'New channel name'
+			description: 'New name for the channel(s)'
 		},
 		description: {
 			type: 'string',
-			description: 'New channel description'
+			description: 'New description for the channel(s)'
 		},
 		image: {
 			type: 'string',
-			description: 'New channel image URL'
+			description: 'New image URL for the channel(s)'
 		},
-		...sqlOption
+		sql: {
+			type: 'boolean',
+			description: 'Output result as SQL INSERT statements'
+		}
 	},
 
-	handler: async (input) => {
-		const slugs = Array.isArray(input.slug) ? input.slug : [input.slug]
+	async run(argv) {
+		const {values, positionals} = parse(argv, this.options)
+
+		if (positionals.length === 0) {
+			throw new Error('At least one channel slug is required')
+		}
 
 		const updates = {
-			name: input.name,
-			description: input.description,
-			image: input.image
+			name: values.name,
+			description: values.description,
+			image: values.image
 		}
 
 		if (Object.values(updates).every((val) => val === undefined)) {
 			throw new Error('At least one field must be provided for update')
 		}
 
+		const slugs = positionals
 		const channels = await Promise.all(
 			slugs.map((slug) => updateChannel(slug, updates))
 		)
-
-		const format = input.sql ? 'sql' : 'json'
 		const data = channels.length === 1 ? channels[0] : channels
-		const formatOptions = format === 'sql' ? {table: 'channels'} : undefined
-		return formatOutput(data, format, formatOptions)
+
+		if (values.sql) return channelToSQL(data)
+		return toJSON(data)
 	},
 
 	examples: [

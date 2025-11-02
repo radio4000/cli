@@ -6,22 +6,15 @@ import {
 	writeChannelImageUrl,
 	writeTracksPlaylist
 } from '../lib/download.js'
+import {parse} from '../utils.js'
 
 export default {
 	description: 'Download all tracks from a channel',
 
-	args: [
-		{
-			name: 'slug',
-			description: 'Channel slug to download',
-			required: true
-		}
-	],
-
 	options: {
 		output: {
 			type: 'string',
-			description: 'Download folder path (defaults to ./downloads/<slug>)'
+			description: 'Output folder path (defaults to ./<slug>)'
 		},
 		limit: {
 			type: 'number',
@@ -29,46 +22,52 @@ export default {
 		},
 		force: {
 			type: 'boolean',
-			description: 'Re-download existing files',
-			default: false
+			default: false,
+			description: 'Re-download existing files'
 		},
 		'retry-failed': {
 			type: 'boolean',
-			description: 'Retry tracks that previously failed (default: skip them)',
-			default: false
+			default: false,
+			description: 'Retry previously failed downloads'
 		},
 		'dry-run': {
 			type: 'boolean',
-			description: 'Show what would be downloaded without downloading',
-			default: false
+			default: false,
+			description: 'Show what would be downloaded without downloading'
 		},
 		verbose: {
 			type: 'boolean',
-			description: 'Show detailed output',
-			default: false
+			default: false,
+			description: 'Show detailed output'
 		},
 		'no-metadata': {
 			type: 'boolean',
-			description: 'Skip writing metadata to files',
-			default: false
+			default: false,
+			description: 'Skip writing metadata files'
 		},
 		concurrency: {
 			type: 'number',
-			description: 'Number of concurrent downloads (1-10, default: 3)',
-			default: 3
+			default: 3,
+			description: 'Number of concurrent downloads'
 		}
 	},
 
-	handler: async (input) => {
-		const {slug} = input
-		const folderPath = resolve(input.output || `./${slug}`)
-		const dryRun = input['dry-run']
-		const verbose = input.verbose
-		const noMetadata = input['no-metadata']
+	async run(argv) {
+		const {values, positionals} = parse(argv, this.options)
+
+		const slug = positionals[0]
+		if (!slug) {
+			throw new Error('Missing channel slug')
+		}
+
+		const folderPath = resolve(values.output || `./${slug}`)
+		const dryRun = values['dry-run']
+		const verbose = values.verbose
+		const noMetadata = values['no-metadata']
 
 		// Get channel and tracks
 		const channel = await getChannel(slug)
-		const tracks = await listTracks({channelSlugs: [slug], limit: input.limit})
+		const tracks = await listTracks({channelSlugs: [slug], limit: values.limit})
 
 		console.log(`${channel.name} (@${channel.slug})`)
 		if (dryRun) {
@@ -93,12 +92,12 @@ export default {
 
 		// Download
 		const result = await downloadChannel(tracks, folderPath, {
-			force: input.force,
-			retryFailed: input['retry-failed'],
+			force: values.force,
+			retryFailed: values['retry-failed'],
 			dryRun,
 			verbose,
 			writeMetadata: !noMetadata,
-			concurrency: input.concurrency
+			concurrency: values.concurrency
 		})
 
 		// Only show summary and failures for actual downloads, not dry runs

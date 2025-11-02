@@ -4,18 +4,11 @@ import {resolve} from 'node:path'
 import {getChannel, listTracks} from '../../lib/data.js'
 import {toExtension, toFilename} from '../../lib/download.js'
 import {extractTags, getUniqueTags} from '../../lib/tags.js'
+import {parse} from '../../utils.js'
 
 export default {
 	description:
 		'Generate tag-based folder structure with symlinks to downloaded tracks',
-
-	args: [
-		{
-			name: 'slug',
-			description: 'Channel slug to generate tags for',
-			required: true
-		}
-	],
 
 	options: {
 		output: {
@@ -39,14 +32,20 @@ export default {
 		}
 	},
 
-	handler: async (input) => {
-		const {slug} = input
-		const basePath = resolve(input.output || `./${slug}`)
+	async run(argv) {
+		const {values, positionals} = parse(argv, this.options)
+
+		if (positionals.length === 0) {
+			throw new Error('Channel slug is required')
+		}
+
+		const slug = positionals[0]
+		const basePath = resolve(values.output || `./${slug}`)
 		const tagsPath = `${basePath}/tags`
 		const tracksPath = `${basePath}/tracks`
-		const dryRun = input['dry-run']
-		const clean = input.clean
-		const verbose = input.verbose
+		const dryRun = values['dry-run']
+		const clean = values.clean
+		const verbose = values.verbose
 
 		// Get channel and tracks
 		const channel = await getChannel(slug)

@@ -1,8 +1,7 @@
-import {formatOption} from '../../lib/common-options.js'
 import {listTracks} from '../../lib/data.js'
-import {formatJSON, formatSQL} from '../../lib/formatters.js'
+import {toJSON, trackToM3U, trackToSQL} from '../../lib/formatters.js'
 import {filterTracksByTags} from '../../lib/tags.js'
-import {formatTrackText} from '../../lib/text-formatters.js'
+import {parse} from '../../utils.js'
 
 function formatTrackSummary(tracks, limit) {
 	const totalCount = tracks.length
@@ -16,7 +15,8 @@ function formatTrackSummary(tracks, limit) {
 		lines.push(`Showing ${showing} track${showing !== 1 ? 's' : ''}:`)
 
 		displayTracks.forEach((track) => {
-			lines.push(formatTrackText(track))
+			// Format single track inline (title + description + url)
+			lines.push(`${track.title}\n${track.description}\n  ${track.url}`)
 		})
 
 		if (totalCount > displayLimit) {
@@ -41,53 +41,64 @@ export default {
 	options: {
 		channel: {
 			type: 'string',
-			description: 'Channel slug to filter by (can be used multiple times)',
 			multiple: true,
-			required: true
+			description: 'Channel slug(s) to list tracks from (required)'
 		},
 		tag: {
 			type: 'string',
-			description: 'Filter by tag (supports --tag a --tag b or --tag a,b,c)',
-			multiple: true
+			multiple: true,
+			description: 'Filter by tag(s)'
 		},
 		'match-all': {
 			type: 'boolean',
-			description:
-				'When using multiple tags, require all tags to match (AND logic)',
-			default: false
+			default: false,
+			description: 'Require all tags instead of any tag'
 		},
 		limit: {
 			type: 'number',
 			description: 'Limit number of results'
 		},
 		format: {
-			...formatOption.format,
-			default: 'text'
+			type: 'string',
+			description:
+				'Output format: text, json, sql, m3u (auto: tty=text, pipe=json)'
 		}
 	},
 
-	handler: async (input) => {
-		const channelSlugs = input.channel && [input.channel].flat()
-		const format = input.format || 'text'
-		const tags = input.tag
-			? Array.isArray(input.tag)
-				? input.tag
-				: [input.tag]
+	async run(argv) {
+		const {values} = parse(argv, this.options)
+
+		if (!values.channel || values.channel.length === 0) {
+			throw new Error('--channel is required')
+		}
+
+		const channelSlugs = Array.isArray(values.channel)
+			? values.channel
+			: [values.channel]
+
+		// Default to text for TTY (human), json when piped (machine)
+		const isTTY = Boolean(process.stdout.isTTY)
+		const format = values.format || (isTTY ? 'text' : 'json')
+
+		const tags = values.tag
+			? Array.isArray(values.tag)
+				? values.tag
+				: [values.tag]
 			: null
-		const matchAll = input['match-all'] || false
+		const matchAll = values['match-all'] || false
 
 		// Fetch all tracks from channel(s), don't apply limit yet if filtering by tags
 		let tracks = await listTracks({
 			channelSlugs,
-			limit: tags ? undefined : input.limit
+			limit: tags ? undefined : values.limit
 		})
 
 		// Filter by tags if specified
 		if (tags && tags.length > 0) {
 			tracks = filterTracksByTags(tracks, tags, matchAll)
 			// Apply limit after filtering
-			if (input.limit) {
-				tracks = tracks.slice(0, input.limit)
+			if (values.limit) {
+				tracks = tracks.slice(0, values.limit)
 			}
 		}
 
@@ -102,12 +113,15 @@ export default {
 
 		// Format based on requested format
 		if (format === 'text') {
-			return formatTrackSummary(tracks, input.limit)
+			return formatTrackSummary(tracks, values.limit)
 		}
 		if (format === 'sql') {
-			return formatSQL(tracks, {table: 'tracks'})
+			return trackToSQL(tracks)
 		}
-		return formatJSON(tracks)
+		if (format === 'm3u') {
+			return trackToM3U(tracks)
+		}
+		return toJSON(tracks)
 	},
 
 	examples: [
@@ -115,6 +129,8 @@ export default {
 		'r4 track list --channel ko002 --limit 20',
 		'r4 track list --channel ko002 --format json',
 		'r4 track list --channel ko002 --format sql',
+		'r4 track list --channel ko002 --format m3u',
+		'r4 track list --channel ko002 --format m3u | mpv --playlist=-',
 		'r4 track list --channel ko002 --channel oskar',
 		'r4 track list --channel ko002 --tag jazz',
 		'r4 track list --channel ko002 --tag jazz --tag ambient',

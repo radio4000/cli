@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 export default {
 	description: 'Show version information',
 
-	handler: async () => {
+	async run() {
 		const pkgPath = resolve(__dirname, '../../package.json')
 		const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
 		return `r4 v${pkg.version}`

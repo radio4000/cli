@@ -5,7 +5,7 @@ import {describe, expect, test} from 'bun:test'
 describe('channel view command', () => {
 	test('formats output as JSON (default)', async () => {
 		const command = await import('./view.js')
-		const result = await command.default.handler({slug: 'ko002'})
+		const result = await command.default.run(['ko002'])
 
 		expect(typeof result).toBe('string')
 		const parsed = JSON.parse(result)
@@ -14,7 +14,7 @@ describe('channel view command', () => {
 
 	test('formats output as SQL', async () => {
 		const command = await import('./view.js')
-		const result = await command.default.handler({slug: 'ko002', format: 'sql'})
+		const result = await command.default.run(['ko002', '--format', 'sql'])
 
 		expect(result).toContain('INSERT INTO channels')
 		expect(result).toContain('ko002')
@@ -22,10 +22,7 @@ describe('channel view command', () => {
 
 	test('formats output as text', async () => {
 		const command = await import('./view.js')
-		const result = await command.default.handler({
-			slug: 'ko002',
-			format: 'text'
-		})
+		const result = await command.default.run(['ko002', '--format', 'text'])
 
 		expect(result).toContain('ko002')
 		expect(result).toContain('Info:')

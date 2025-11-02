@@ -29,7 +29,9 @@ test('trackSchema validates v1 data with acceptable error rate', async () => {
 
 	// Log only if we exceed thresholds
 	if (invalidCount >= 100 || errorRate >= 0.001) {
-		console.log(`\nSchema validation: ${tracks.length} tracks, ${invalidCount} invalid (${(errorRate * 100).toFixed(3)}%)`)
+		console.log(
+			`\nSchema validation: ${tracks.length} tracks, ${invalidCount} invalid (${(errorRate * 100).toFixed(3)}%)`
+		)
 		console.log('Errors by field:', errorTypes)
 	}
 

@@ -42,7 +42,11 @@ test('writeFailures appends to existing file', async () => {
 	await writeFailures(
 		[
 			{
-				track: {id: 'track1', title: 'First', url: 'https://youtube.com/watch?v=a'},
+				track: {
+					id: 'track1',
+					title: 'First',
+					url: 'https://youtube.com/watch?v=a'
+				},
 				error: 'Error 1'
 			}
 		],
@@ -51,7 +55,11 @@ test('writeFailures appends to existing file', async () => {
 	await writeFailures(
 		[
 			{
-				track: {id: 'track2', title: 'Second', url: 'https://youtube.com/watch?v=b'},
+				track: {
+					id: 'track2',
+					title: 'Second',
+					url: 'https://youtube.com/watch?v=b'
+				},
 				error: 'Error 2'
 			}
 		],
@@ -81,12 +89,20 @@ test('readFailedTrackIds reads track IDs from failures.jsonl', async () => {
 	const content = [
 		{
 			timestamp: '2025-01-01T00:00:00Z',
-			track: {id: 'track1', title: 'Song 1', url: 'https://youtube.com/watch?v=a'},
+			track: {
+				id: 'track1',
+				title: 'Song 1',
+				url: 'https://youtube.com/watch?v=a'
+			},
 			error: 'Error'
 		},
 		{
 			timestamp: '2025-01-01T00:00:01Z',
-			track: {id: 'track2', title: 'Song 2', url: 'https://youtube.com/watch?v=b'},
+			track: {
+				id: 'track2',
+				title: 'Song 2',
+				url: 'https://youtube.com/watch?v=b'
+			},
 			error: 'Error'
 		}
 	]
