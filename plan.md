@@ -7,14 +7,6 @@ Ideas and tasks for later.
 - Maintain a local cache of fetched tracks somehow to avoid fetching all tracks tons of times
 - Add premium/poToken support for YouTube Music. e.g. if you have a premium account you can dl the tracks via that which gives you 256kb
 
-## Data Issues
-
-### Malformed JSON in track data
-**Issue:** `r4 track list --channel acapulco` (without --limit) produces invalid JSON with unterminated string at position 65495 (line 1837 column 13)
-**Impact:** Cannot pipe full track list to jq or other JSON processors
-**Workaround:** Use `--limit` flag to avoid the malformed data
-**TODO:** Investigate which track has malformed data and either fix at source or add validation/sanitization in the CLI
-
 ## CLI Issues (based on testing + comparison with `bun` CLI)
 
 ### Design Inspirations from Bun
@@ -53,14 +45,6 @@ Ideas and tasks for later.
 5. **Hint about subcommand help**
    - `<command> --help    Print help text for command`
    - Very clear signposting!
-
-#### Flags section clarity
-Bun shows:
-- Short form: `-h, --help`
-- Value format: `--config=<val>`
-- Description inline
-
-Our current help shows flags but not consistently across commands.
 
 ### Improvements to Consider
 
@@ -109,34 +93,6 @@ Examples:
 #### Shell completions
 Generate completion scripts for bash/zsh/fish
 - Low priority but would improve UX
-
-### Testing Checklist
-
-Core functionality:
-- [x] `r4` → shows help
-- [x] `r4 -h` → shows help
-- [x] `r4 --help` → shows help
-- [x] `r4 help` → shows help
-- [x] `r4 version` → shows version
-- [x] `r4 channel` → shows channel subcommands
-- [x] `r4 channel list --help` → shows channel list help
-- [x] `r4 channel list -h` → shows channel list help
-
-TTY detection:
-- [x] `r4 channel list` (TTY) → human readable text
-- [x] `r4 channel list | cat` (not TTY) → JSON
-- [x] `r4 track list --channel acapulco --limit 5 | jq` → works
-
-Exit codes & stderr:
-- [x] Exit code 0 on success ✅
-- [x] Exit code non-zero on failure ✅
-- [x] Errors go to stderr: `r4 bad 2>/dev/null` hides error ✅
-
-### Exit codes and stderr (from clig.dev)
-✅ **Verified working correctly:**
-- Exit codes: 0 on success, 1 on failure
-- Errors go to stderr (can be redirected with `2>/dev/null`)
-- Data goes to stdout (clean for piping)
 
 ### Standard flags to consider (from clig.dev)
 - `--quiet` / `-q` - Suppress non-essential output

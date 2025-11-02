@@ -1,5 +1,5 @@
 import {listTracks} from '../../lib/data.js'
-import {toJSON, trackToSQL} from '../../lib/formatters.js'
+import {toJSON, trackToM3U, trackToSQL} from '../../lib/formatters.js'
 import {filterTracksByTags} from '../../lib/tags.js'
 import {parse} from '../../utils.js'
 
@@ -97,6 +97,9 @@ export default {
 		if (format === 'sql') {
 			return trackToSQL(tracks)
 		}
+		if (format === 'm3u') {
+			return trackToM3U(tracks)
+		}
 		return toJSON(tracks)
 	},
 
@@ -105,6 +108,8 @@ export default {
 		'r4 track list --channel ko002 --limit 20',
 		'r4 track list --channel ko002 --format json',
 		'r4 track list --channel ko002 --format sql',
+		'r4 track list --channel ko002 --format m3u',
+		'r4 track list --channel ko002 --format m3u | mpv --playlist=-',
 		'r4 track list --channel ko002 --channel oskar',
 		'r4 track list --channel ko002 --tag jazz',
 		'r4 track list --channel ko002 --tag jazz --tag ambient',

@@ -148,3 +148,19 @@ export function trackToText(data) {
 	const tracks = Array.isArray(data) ? data : [data]
 	return tracks.map(formatTrackText).join('\n')
 }
+
+/**
+ * Format track(s) as M3U playlist
+ * Handles single track or array of tracks
+ */
+export function trackToM3U(data) {
+	const tracks = Array.isArray(data) ? data : [data]
+	const lines = ['#EXTM3U']
+
+	for (const track of tracks) {
+		lines.push(`#EXTINF:-1,${track.title}`)
+		lines.push(track.url)
+	}
+
+	return lines.join('\n')
+}
