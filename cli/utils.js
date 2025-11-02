@@ -6,12 +6,12 @@ import {parseArgs} from 'node:util'
 
 /**
  * Route argv to a command file
- * @param {string} commandsDir - Root commands directory
  * @param {string[]} argv - process.argv.slice(2)
  * @returns {Promise<{commandFile: string, commandArgv: string[], commandName: string}>}
  */
-export async function route(commandsDir, argv) {
-	const resolvedDir = resolve(commandsDir)
+export async function route(argv) {
+	const __dirname = dirname(fileURLToPath(import.meta.url))
+	const resolvedDir = resolve(__dirname, 'commands')
 
 	// Extract command path (non-flag args at start)
 	const commandPath = []
@@ -118,12 +118,12 @@ export function parse(argv, options = {}) {
 
 /**
  * List all commands recursively
- * @param {string} [commandsDir] - Root commands directory (defaults to cli/commands)
+ * @param {string} [commandsDir] - Internal: directory for recursion
  * @param {string} prefix - Internal: path prefix for recursion
  * @returns {Promise<Array<{name: string, description: string}>>}
  */
 export async function listAllCommands(commandsDir, prefix = '') {
-	// Default to cli/commands directory if not specified
+	// Default to cli/commands directory
 	if (!commandsDir) {
 		const __dirname = dirname(fileURLToPath(import.meta.url))
 		commandsDir = resolve(__dirname, 'commands')
