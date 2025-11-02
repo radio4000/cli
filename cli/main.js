@@ -16,22 +16,12 @@ async function main() {
 		// Load command
 		const {default: cmd} = await import(`file://${commandFile}`)
 
-		// Execute command - support both new and old format
-		let result
-		if (typeof cmd.run === 'function') {
-			// New format: cmd.run(argv)
-			result = await cmd.run(commandArgv)
-		} else if (typeof cmd.handler === 'function') {
-			// Old format: fallback to framework for now
-			const {executeCommand} = await import('../cli-framework/index.js')
-			result = await executeCommand({
-				commandsDir,
-				argv,
-				context: {cwd: process.cwd()}
-			})
-		} else {
-			throw new Error('Command must export either run() or handler()')
+		// Execute command
+		if (typeof cmd.run !== 'function') {
+			throw new Error('Command must export a run() function')
 		}
+
+		const result = await cmd.run(commandArgv)
 
 		// Commands return formatted strings, just print
 		if (result) {
