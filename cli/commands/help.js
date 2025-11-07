@@ -72,7 +72,7 @@ ${commandsSection.trimEnd()}
 
 FLAGS
        --limit <n>     Limit number of results
-       --sql           Output as SQL statements (instead of JSON)
+       --format <type> Output format: text, json, sql (auto: tty=text, pipe=json)
        --channel <slug>
                        Filter tracks by channel slug
 
@@ -98,7 +98,8 @@ EXAMPLES
        r4 track create --url "..." --title "Song" --channel mysounds
 
        # Export to SQLite
-       r4 channel list --limit 1000 --sql | sqlite3 channels.db
+       r4 schema | sqlite3 channels.db
+       r4 channel list --limit 1000 --format sql | sqlite3 channels.db
 
        # Pipe and transform
        r4 track list --channel foo | jq '.[] | .title'
