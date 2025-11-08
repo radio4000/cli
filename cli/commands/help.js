@@ -60,7 +60,7 @@ SYNOPSIS
 
 TLDR
        r4 channel list --limit 10      # List channels
-       r4 channel view acapulco        # View channel details
+       r4 channel view ko002        # View channel details
        r4 track list                   # List all tracks
        r4 track list --channel foo     # List tracks in channel
        r4 auth login                   # Authenticate
@@ -89,9 +89,9 @@ AUTHENTICATION
 EXAMPLES
        # List and view
        r4 channel list --limit 100
-       r4 channel view acapulco oskar
+       r4 channel view ko002 oskar
        r4 track list
-       r4 track list --channel acapulco
+       r4 track list --channel ko002
 
        # Create and update
        r4 channel create mysounds --name "My Sounds"
@@ -105,7 +105,7 @@ EXAMPLES
        r4 track list --channel foo | jq '.[] | .title'
 
        # Download
-       r4 download acapulco --folder ~/Music
+       r4 download ko002 --folder ~/Music
 
 SEE ALSO
        https://radio4000.com

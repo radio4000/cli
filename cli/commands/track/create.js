@@ -40,7 +40,7 @@ export default {
 	},
 
 	examples: [
-		'r4 track create --channel mysounds --title "Song Name" --url "https://youtube.com/..."',
-		'echo \'{"title":"Song","url":"..."}\' | r4 track create --channel mysounds'
+		'r4 track create --channel radio123 --title "Song Name" --url "https://youtube.com/..."',
+		'echo \'{"title":"Song","url":"..."}\' | r4 track create --channel radio123'
 	]
 }

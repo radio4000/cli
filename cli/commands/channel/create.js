@@ -36,7 +36,7 @@ export default {
 	},
 
 	examples: [
-		'r4 channel create mysounds --name "My Sounds"',
-		'r4 channel create mysounds --name "My Sounds" --description "A collection"'
+		'r4 channel create radio123 --name "Radio 123"',
+		'r4 channel create radio123 --name "Radio 123" --description "A collection"'
 	]
 }

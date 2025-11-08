@@ -50,9 +50,9 @@ export default {
 	},
 
 	examples: [
-		'r4 track update <id> --title "New Title"',
-		'r4 track update <id> --url "https://new-url.com"',
+		'r4 track update <id> --title "New title"',
+		'r4 track update <id> --url "https://..."',
 		'r4 track update <id> --description "New description"',
-		'r4 track update <id1> <id2> --title "Same Title"'
+		'r4 track update <id1> <id2> --title "Shared title"'
 	]
 }
