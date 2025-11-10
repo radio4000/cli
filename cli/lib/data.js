@@ -18,13 +18,61 @@ let v1TracksCache = null
 
 // ===== HELPERS =====
 
-const v2WithV1Fallback = async (v2Fn, v1Data, combiner) => {
+const mergeVersions = async (v2Fn, v1Data, combiner) => {
 	try {
 		const v2Result = await v2Fn()
 		return combiner ? combiner(v2Result, v1Data) : v2Result
 	} catch {
 		return v1Data
 	}
+}
+
+const mergeBySlug = (v2Items, v1Items) => {
+	const v2Slugs = new Set(v2Items.map((item) => item.slug))
+	return [...v2Items, ...v1Items.filter((item) => !v2Slugs.has(item.slug))]
+}
+
+const takeMaybe = (limit) => (items) =>
+	limit ? items.slice(0, limit) : items
+
+const parseAsChannel = (source) => (item) =>
+	channelSchema.parse({...item, source})
+
+const parseAsTrack = (source) => (item) =>
+	trackSchema.parse({...item, source})
+
+const validateTracks = (source) => (items) => {
+	const results = items.map((item) => {
+		const parsed = trackSchema.safeParse({...item, source})
+		return {
+			success: parsed.success,
+			data: parsed.success ? parsed.data : null,
+			error: parsed.success
+				? null
+				: {
+						id: item.id,
+						title: item.title,
+						url: item.url,
+						message: parsed.error.errors[0]?.message || parsed.error.message
+					}
+		}
+	})
+
+	const valid = results.filter((r) => r.success).map((r) => r.data)
+	const invalid = results.filter((r) => !r.success).map((r) => r.error)
+
+	return {data: valid, errors: invalid}
+}
+
+const reportTrackErrors = (errors) => {
+	if (errors.length === 0) return
+	console.error(`Warning: Skipped ${errors.length} invalid track(s):`)
+	errors.forEach((e) => {
+		console.error(`  "${e.title}"`)
+		console.error(`    URL: ${e.url}`)
+		console.error(`    Reason: ${e.message}`)
+		console.error(`    Fix: r4 track edit ${e.id}`)
+	})
 }
 
 const channelNotFound = (slugs) => {
@@ -91,22 +139,16 @@ export async function requireAuth() {
 
 export async function listChannels(options = {}) {
 	const v1Channels = await loadV1Channels()
+	const limitTo = takeMaybe(options.limit)
 
-	return v2WithV1Fallback(
+	return mergeVersions(
 		async () => {
 			const {data, error} = await sdk.channels.readChannels()
 			if (error) throw error
-			return data.map((item) => channelSchema.parse({...item, source: 'v2'}))
+			return data.map(parseAsChannel('v2'))
 		},
-		options.limit ? v1Channels.slice(0, options.limit) : v1Channels,
-		(v2Channels, v1) => {
-			const v2Slugs = new Set(v2Channels.map((ch) => ch.slug))
-			const combined = [
-				...v2Channels,
-				...v1.filter((ch) => !v2Slugs.has(ch.slug))
-			]
-			return options.limit ? combined.slice(0, options.limit) : combined
-		}
+		limitTo(v1Channels),
+		(v2Channels, v1) => limitTo(mergeBySlug(v2Channels, v1))
 	)
 }
 
@@ -164,67 +206,41 @@ export async function listTracks(options = {}) {
 
 	const v1Tracks = await loadV1Tracks()
 	const v1Slugs = new Set((await loadV1Channels()).map((ch) => ch.slug))
+	const limitTo = takeMaybe(maxItems)
+	const filterBySlugs = (tracks) =>
+		tracks.filter((tr) => channelSlugs.includes(tr.slug))
 
-	const validateChannels = (v2Slugs = new Set()) => {
+	const ensureChannelsExist = (v2Slugs = new Set()) => {
 		const missing = channelSlugs.filter(
 			(s) => !v1Slugs.has(s) && !v2Slugs.has(s)
 		)
 		if (missing.length) throw channelNotFound(missing)
 	}
 
+	const fetchV2Tracks = async () => {
+		const {data: channels} = await sdk.channels.readChannels()
+		const v2Slugs = new Set(channels?.map((ch) => ch.slug) || [])
+		ensureChannelsExist(v2Slugs)
+
+		const rawTracks = await Promise.all(
+			channelSlugs.map(async (slug) => {
+				const {data, error} = await sdk.channels.readChannelTracks(slug)
+				if (error) throw error
+				return data
+			})
+		).then((results) => results.flat())
+
+		return validateTracks('v2')(rawTracks)
+	}
+
 	try {
-		const {data: v2Data} = await sdk.channels.readChannels()
-		const v2Slugs = new Set(v2Data?.map((ch) => ch.slug) || [])
-		validateChannels(v2Slugs)
-
-		const rawTracks = (
-			await Promise.all(
-				channelSlugs.map(async (slug) => {
-					const {data, error} = await sdk.channels.readChannelTracks(slug)
-					if (error) throw error
-					return data
-				})
-			)
-		).flat()
-		const invalidTracks = []
-
-		const v2Tracks = rawTracks
-			.map((tr) => {
-				try {
-					return trackSchema.parse({...tr, source: 'v2'})
-				} catch (error) {
-					invalidTracks.push({
-						id: tr.id,
-						title: tr.title,
-						url: tr.url,
-						error: error.errors?.[0]?.message || error.message
-					})
-					return null
-				}
-			})
-			.filter(Boolean)
-
-		if (invalidTracks.length > 0) {
-			console.error(
-				`Warning: Skipped ${invalidTracks.length} invalid track(s):`
-			)
-			invalidTracks.forEach((t) => {
-				console.error(`  "${t.title}"`)
-				console.error(`    URL: ${t.url}`)
-				console.error(`    Reason: ${t.error}`)
-				console.error(`    Fix: r4 track edit ${t.id}`)
-			})
-		}
-
-		const combined = [...v2Tracks, ...v1Tracks].filter((tr) =>
-			channelSlugs.includes(tr.slug)
-		)
-		return maxItems ? combined.slice(0, maxItems) : combined
+		const {data: v2Tracks, errors} = await fetchV2Tracks()
+		reportTrackErrors(errors)
+		return limitTo([...v2Tracks, ...filterBySlugs(v1Tracks)])
 	} catch (error) {
 		if (error.code === 'CHANNEL_NOT_FOUND') throw error
-		validateChannels()
-		const filtered = v1Tracks.filter((tr) => channelSlugs.includes(tr.slug))
-		return maxItems ? filtered.slice(0, maxItems) : filtered
+		ensureChannelsExist()
+		return limitTo(filterBySlugs(v1Tracks))
 	}
 }
 
@@ -277,59 +293,59 @@ export async function deleteTrack(id) {
 /** @param {string} query */
 export async function searchChannels(query, options = {}) {
 	const v1Channels = await loadV1Channels()
-	const keys = ['slug', 'name', 'description']
+	const limitTo = takeMaybe(options.limit)
 
-	return v2WithV1Fallback(
-		async () => {
-			const {data, error} = await sdk.supabase
-				.from('channels')
-				.select()
-				.textSearch('fts', `'${query}':*`)
-			if (error) throw new Error(error.message)
-			return data.map((item) => channelSchema.parse({...item, source: 'v2'}))
-		},
+	const fuzzySearch = (channels) =>
 		fuzzysort
-			.go(query, v1Channels, {
-				keys,
+			.go(query, channels, {
+				keys: ['slug', 'name', 'description'],
 				all: false,
 				limit: options.limit
 			})
-			.map((r) => r.obj),
-		(v2Results, v1Results) => {
-			const v2Slugs = new Set(v2Results.map((ch) => ch.slug))
-			const combined = [
-				...v2Results,
-				...v1Results.filter((ch) => !v2Slugs.has(ch.slug))
-			]
-			return options.limit ? combined.slice(0, options.limit) : combined
-		}
+			.map((r) => r.obj)
+
+	const textSearch = async () => {
+		const {data, error} = await sdk.supabase
+			.from('channels')
+			.select()
+			.textSearch('fts', `'${query}':*`)
+		if (error) throw new Error(error.message)
+		return data.map(parseAsChannel('v2'))
+	}
+
+	return mergeVersions(
+		textSearch,
+		fuzzySearch(v1Channels),
+		(v2Results, v1Results) => limitTo(mergeBySlug(v2Results, v1Results))
 	)
 }
 
 export async function searchTracks(query, options = {}) {
 	const v1Tracks = await loadV1Tracks()
-	const keys = ['title', 'description']
+	const limitTo = takeMaybe(options.limit)
 
-	return v2WithV1Fallback(
-		async () => {
-			const {data, error} = await sdk.supabase
-				.from('channel_tracks')
-				.select()
-				.textSearch('fts', `'${query}':*`)
-			if (error) throw new Error(error.message)
-			return data.map((item) => trackSchema.parse({...item, source: 'v2'}))
-		},
+	const fuzzySearch = (tracks) =>
 		fuzzysort
-			.go(query, v1Tracks, {
-				keys,
+			.go(query, tracks, {
+				keys: ['title', 'description'],
 				all: false,
 				limit: options.limit
 			})
-			.map((r) => r.obj),
-		(v2Results, v1Results) => {
-			const combined = [...v2Results, ...v1Results]
-			return options.limit ? combined.slice(0, options.limit) : combined
-		}
+			.map((r) => r.obj)
+
+	const textSearch = async () => {
+		const {data, error} = await sdk.supabase
+			.from('channel_tracks')
+			.select()
+			.textSearch('fts', `'${query}':*`)
+		if (error) throw new Error(error.message)
+		return data.map(parseAsTrack('v2'))
+	}
+
+	return mergeVersions(
+		textSearch,
+		fuzzySearch(v1Tracks),
+		(v2Results, v1Results) => limitTo([...v2Results, ...v1Results])
 	)
 }
 
