@@ -32,14 +32,12 @@ const mergeBySlug = (v2Items, v1Items) => {
 	return [...v2Items, ...v1Items.filter((item) => !v2Slugs.has(item.slug))]
 }
 
-const takeMaybe = (limit) => (items) =>
-	limit ? items.slice(0, limit) : items
+const takeMaybe = (limit) => (items) => (limit ? items.slice(0, limit) : items)
 
 const parseAsChannel = (source) => (item) =>
 	channelSchema.parse({...item, source})
 
-const parseAsTrack = (source) => (item) =>
-	trackSchema.parse({...item, source})
+const parseAsTrack = (source) => (item) => trackSchema.parse({...item, source})
 
 const validateTracks = (source) => (items) => {
 	const results = items.map((item) => {

@@ -26,5 +26,8 @@
 	},
 	"bin": {
 		"r4": "./cli/main.js"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.5"
 	}
 }
