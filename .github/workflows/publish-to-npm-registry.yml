@@ -33,8 +33,6 @@ jobs:
         run: bun run check
 
       - name: Publish to NPM
-        run: |
-          bun config set --global registry https://registry.npmjs.org/
-          bun publish --access public
+        run: bun publish --access public
         env:
-          BUN_NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
