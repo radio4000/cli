@@ -14,7 +14,7 @@ export const channelSchema = z.object({
 	firebase_id: z.string().optional(),
 	created_at: z.iso.datetime({offset: true}).optional(),
 	updated_at: z.iso.datetime({offset: true}).optional(),
-	latest_track_at: z.iso.datetime({offset: true}).optional(),
+	latest_track_at: z.iso.datetime({offset: true}).nullish(),
 	source: z.enum(['v1', 'v2']).default('v2')
 })
 
@@ -53,6 +53,7 @@ export const channelSQL = `CREATE TABLE IF NOT EXISTS channels (
   firebase_id TEXT,
   created_at TEXT,
   updated_at TEXT,
+  latest_track_at TEXT,
   source TEXT
 );`
 
