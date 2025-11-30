@@ -14,6 +14,7 @@ export const channelSchema = z.object({
 	firebase_id: z.string().optional(),
 	created_at: z.iso.datetime({offset: true}).optional(),
 	updated_at: z.iso.datetime({offset: true}).optional(),
+	latest_track_at: z.iso.datetime({offset: true}).optional(),
 	source: z.enum(['v1', 'v2']).default('v2')
 })
 
