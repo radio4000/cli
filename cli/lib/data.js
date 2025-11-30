@@ -233,14 +233,17 @@ export async function listTracks(options = {}) {
 		return validateTracks('v2')(rawTracks)
 	}
 
+	const sortByNewest = (tracks) =>
+		tracks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
 	try {
 		const {data: v2Tracks, errors} = await fetchV2Tracks()
 		reportTrackErrors(errors)
-		return limitTo([...v2Tracks, ...filterBySlugs(v1Tracks)])
+		return limitTo(sortByNewest([...v2Tracks, ...filterBySlugs(v1Tracks)]))
 	} catch (error) {
 		if (error.code === 'CHANNEL_NOT_FOUND') throw error
 		ensureChannelsExist()
-		return limitTo(filterBySlugs(v1Tracks))
+		return limitTo(sortByNewest(filterBySlugs(v1Tracks)))
 	}
 }
 
