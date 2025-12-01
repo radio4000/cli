@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url'
 import {promisify} from 'node:util'
 import {sdk} from '@radio4000/sdk'
 import fuzzysort from 'fuzzysort'
+import {ZodError} from 'zod'
 import * as config from './config.js'
 import {channelSchema, trackSchema} from './schema.js'
 
@@ -171,7 +172,8 @@ export async function getChannel(slug) {
 		const {data, error} = await sdk.channels.readChannel(slug)
 		if (error) throw error
 		return channelSchema.parse({...data, source: 'v2'})
-	} catch {
+	} catch (err) {
+		if (err instanceof ZodError) throw err
 		const channel = (await loadV1Channels()).find((ch) => ch.slug === slug)
 		if (!channel) throw new Error(`Channel not found: ${slug}`)
 		return channel
@@ -247,14 +249,17 @@ export async function listTracks(options = {}) {
 		return validateTracks('v2')(rawTracks)
 	}
 
+	const sortByNewest = (tracks) =>
+		tracks.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
 	try {
 		const {data: v2Tracks, errors} = await fetchV2Tracks()
 		reportTrackErrors(errors)
-		return limitTo([...v2Tracks, ...filterBySlugs(v1Tracks)])
+		return limitTo(sortByNewest([...v2Tracks, ...filterBySlugs(v1Tracks)]))
 	} catch (error) {
 		if (error.code === 'CHANNEL_NOT_FOUND') throw error
 		ensureChannelsExist()
-		return limitTo(filterBySlugs(v1Tracks))
+		return limitTo(sortByNewest(filterBySlugs(v1Tracks)))
 	}
 }
 
@@ -263,7 +268,8 @@ export async function getTrack(id) {
 		const {data, error} = await sdk.tracks.readTrack(id)
 		if (error) throw error
 		return trackSchema.parse({...data, source: 'v2'})
-	} catch {
+	} catch (err) {
+		if (err instanceof ZodError) throw err
 		const track = (await loadV1Tracks()).find((tr) => tr.id === id)
 		if (!track) throw new Error(`Track not found: ${id}`)
 		return track
