@@ -3,17 +3,10 @@
 Command-line interface for [Radio4000](https://radio4000.com)
 - browse, create, update, and download radio channels and tracks.
 
-
-## Installation
-
-NOT RELEASED YET! Below install instructions won't work yet.
-
 ```bash
 npm i -g r4
-r4
+r4 help
 ```
-
-> For the `r4 download` command to work, make sure [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) is installed on your system.
 
 Here's a quick overview:
 
@@ -39,13 +32,15 @@ r4 track list --channel ko002 --format sql | sqlite3 my.db
 
 Most commands support a  `--format` flag to print human-readable text, json or SQL.
 
+> For the `r4 download` command to work, make sure [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) is installed.
+
 ## Development
 
 ```bash
 git clone git@github.com:radio4000/r4.git
 cd r4
 bun install
-bun link
-bun run check  # format and lint
+bun link # optional for easy local dev
+bun run check # format and lint
 bun run test
 ```
