@@ -1,13 +1,12 @@
 {
 	"name": "r4",
-	"version": "2.0.0-beta",
+	"version": "2.0.2",
 	"description": "CLI for Radio4000",
 	"type": "module",
 	"main": "cli/main.js",
 	"scripts": {
 		"check": "biome check --write",
-		"test": "bun test --only-failures",
-		"postinstall": "tar xzf data/data_v1.tar.gz -C data"
+		"test": "bun test --only-failures"
 	},
 	"repository": {
 		"type": "git",
@@ -26,5 +25,8 @@
 	},
 	"bin": {
 		"r4": "./cli/main.js"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.5"
 	}
 }

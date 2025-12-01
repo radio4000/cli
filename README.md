@@ -6,6 +6,8 @@ Command-line interface for [Radio4000](https://radio4000.com)
 
 ## Installation
 
+NOT RELEASED YET! Below install instructions won't work yet.
+
 ```bash
 npm i -g r4
 r4
