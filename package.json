@@ -15,7 +15,7 @@
 	"author": "radio4000",
 	"license": "GPL-3.0-or-later",
 	"dependencies": {
-		"@radio4000/sdk": "^0.6.3",
+		"@radio4000/sdk": "^0.6.5",
 		"ffmetadata": "^1.7.0",
 		"filenamify": "^7.0.1",
 		"fuzzysort": "^3.1.0",
