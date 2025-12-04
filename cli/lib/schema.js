@@ -33,6 +33,8 @@ export const trackSchema = z.preprocess(
 		description: z.string().nullish().default(''),
 		discogs_url: z.string().url().nullish(),
 		tags: z.array(z.string()).default([]),
+		duration: z.number().int().nonnegative().nullish(),
+		playback_error: z.string().nullish(),
 		created_at: z.iso.datetime({offset: true}).optional(),
 		updated_at: z.iso.datetime({offset: true}).optional(),
 		source: z.enum(['v1', 'v2']).default('v2')
