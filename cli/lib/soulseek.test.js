@@ -1,0 +1,218 @@
+import {expect, mock, test} from 'bun:test'
+import {createClient, downloadTrack, downloadTracks} from './soulseek.js'
+
+// Mock fetch for testing without real slskd
+const mockFetch = (responses) => {
+	let callIndex = 0
+	return mock((url, options) => {
+		const response = responses[callIndex] || responses[responses.length - 1]
+		callIndex++
+		return Promise.resolve({
+			ok: response.ok !== false,
+			status: response.status || 200,
+			json: () => Promise.resolve(response.data),
+			text: () => Promise.resolve(response.text || '')
+		})
+	})
+}
+
+test('createClient authenticates and returns token', async () => {
+	const originalFetch = globalThis.fetch
+	globalThis.fetch = mockFetch([{data: {token: 'test-token-123'}}])
+
+	const client = createClient({host: 'localhost', port: 5030})
+
+	// checkConnection calls authenticate internally
+	globalThis.fetch = mockFetch([
+		{data: {token: 'test-token-123'}},
+		{data: {version: '0.24.0'}}
+	])
+
+	const connected = await client.checkConnection()
+	expect(connected).toBe(true)
+
+	globalThis.fetch = originalFetch
+})
+
+test('search returns ranked results filtered by quality', async () => {
+	const originalFetch = globalThis.fetch
+
+	const mockResponses = [
+		// Auth
+		{data: {token: 'test-token'}},
+		// Start search
+		{data: {id: 'search-123'}},
+		// Poll search state (completed)
+		{data: {state: 'Completed', isComplete: true}},
+		// Get responses
+		{
+			data: [
+				{
+					username: 'user1',
+					queueLength: 0,
+					uploadSpeed: 100000,
+					files: [
+						{filename: '/music/Artist - Song.flac', size: 30000000, bitRate: 0},
+						{filename: '/music/Artist - Song.mp3', size: 8000000, bitRate: 320}
+					]
+				},
+				{
+					username: 'user2',
+					queueLength: 5,
+					uploadSpeed: 50000,
+					files: [
+						{filename: '/music/Artist - Song.mp3', size: 7000000, bitRate: 256}
+					]
+				}
+			]
+		}
+	]
+
+	globalThis.fetch = mockFetch(mockResponses)
+
+	const client = createClient()
+	const results = await client.search('Artist Song', {
+		timeout: 1000,
+		minBitrate: 320
+	})
+
+	// Should have 2 results (flac and 320kbps mp3, not the 256kbps)
+	expect(results.length).toBe(2)
+
+	// FLAC should be ranked first (lossless)
+	expect(results[0].extension).toBe('flac')
+	expect(results[0].isLossless).toBe(true)
+
+	// 320kbps mp3 second
+	expect(results[1].extension).toBe('mp3')
+	expect(results[1].bitrate).toBe(320)
+
+	globalThis.fetch = originalFetch
+})
+
+test('buildSearchQuery cleans up track titles', async () => {
+	// Test the search query building by checking what gets passed to the API
+	const originalFetch = globalThis.fetch
+	let capturedSearchText = null
+
+	globalThis.fetch = mock((url, options) => {
+		if (url.includes('/searches/text') && options?.body) {
+			const body = JSON.parse(options.body)
+			capturedSearchText = body.searchText
+		}
+
+		// Return appropriate response based on URL
+		if (url.includes('/session')) {
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({token: 'test-token'}),
+				text: () => Promise.resolve('')
+			})
+		}
+		if (url.includes('/searches/text')) {
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({id: 'test-search'}),
+				text: () => Promise.resolve('')
+			})
+		}
+		if (url.includes('/searches/test-search/responses')) {
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve([]),
+				text: () => Promise.resolve('')
+			})
+		}
+		if (url.includes('/searches/test-search')) {
+			return Promise.resolve({
+				ok: true,
+				json: () => Promise.resolve({state: 'Completed', isComplete: true}),
+				text: () => Promise.resolve('')
+			})
+		}
+		return Promise.resolve({
+			ok: true,
+			json: () => Promise.resolve({}),
+			text: () => Promise.resolve('')
+		})
+	})
+
+	const client = createClient()
+
+	// Search with a messy title
+	await client.search('Artist - Song (Official Video) [Remastered]', {
+		timeout: 100
+	})
+
+	// Should have cleaned up the title
+	expect(capturedSearchText).toBe('Artist - Song')
+
+	globalThis.fetch = originalFetch
+})
+
+test('downloadTrack returns no_match when no results', async () => {
+	const originalFetch = globalThis.fetch
+
+	globalThis.fetch = mockFetch([
+		{data: {token: 'test-token'}},
+		{data: {id: 'search-123'}},
+		{data: {state: 'Completed'}},
+		{data: []} // No results
+	])
+
+	const client = createClient()
+	const track = {id: 'track-1', title: 'Unknown Artist - Rare Song'}
+
+	const result = await downloadTrack(client, track, '/tmp/test', {})
+
+	expect(result.status).toBe('no_match')
+	expect(result.track).toBe(track)
+
+	globalThis.fetch = originalFetch
+})
+
+test('quality scoring prefers lossless over high bitrate', () => {
+	// This tests the internal scoring logic indirectly through search results ordering
+	const originalFetch = globalThis.fetch
+
+	const mockResponses = [
+		{data: {token: 'test-token'}},
+		{data: {id: 'search-123'}},
+		{data: {state: 'Completed'}},
+		{
+			data: [
+				{
+					username: 'user1',
+					queueLength: 0,
+					uploadSpeed: 100000,
+					files: [
+						// High bitrate MP3
+						{filename: '/music/song.mp3', size: 15000000, bitRate: 320}
+					]
+				},
+				{
+					username: 'user2',
+					queueLength: 0,
+					uploadSpeed: 100000,
+					files: [
+						// FLAC (lossless)
+						{filename: '/music/song.flac', size: 30000000, bitRate: 0}
+					]
+				}
+			]
+		}
+	]
+
+	globalThis.fetch = mockFetch(mockResponses)
+
+	const client = createClient()
+
+	return client.search('test', {timeout: 100}).then((results) => {
+		// FLAC should be first despite being from user2
+		expect(results[0].extension).toBe('flac')
+		expect(results[0].isLossless).toBe(true)
+		expect(results[1].extension).toBe('mp3')
+
+		globalThis.fetch = originalFetch
+	})
+})
