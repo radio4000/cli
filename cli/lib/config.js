@@ -5,7 +5,14 @@ import {join} from 'node:path'
 const configPath = join(homedir(), '.config', 'radio4000', 'config.json')
 
 const defaults = {
-	auth: {session: null}
+	auth: {session: null},
+	soulseek: {
+		// slskd connection settings
+		host: 'localhost',
+		port: 5030,
+		username: 'slskd',
+		password: 'slskd'
+	}
 }
 
 /** Load config from disk, return defaults if missing */
@@ -32,13 +39,16 @@ export async function save(config) {
 	return config
 }
 
-/** Update config with partial changes (deep merges auth) */
+/** Update config with partial changes (deep merges auth and soulseek) */
 export async function update(changes) {
 	const config = await load()
 	const merged = {
 		...config,
 		...changes,
-		auth: changes.auth ? {...config.auth, ...changes.auth} : config.auth
+		auth: changes.auth ? {...config.auth, ...changes.auth} : config.auth,
+		soulseek: changes.soulseek
+			? {...config.soulseek, ...changes.soulseek}
+			: config.soulseek
 	}
 	return save(merged)
 }

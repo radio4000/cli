@@ -21,17 +21,18 @@ const DEFAULT_PORT = 5030
 const DEFAULT_USERNAME = 'slskd'
 const DEFAULT_PASSWORD = 'slskd'
 
-const LOSSLESS_FORMATS = ['flac', 'wav', 'ape', 'wv', 'alac']
+// DJ-compatible formats (CDJ/Rekordbox/Traktor/Serato compatible)
+const LOSSLESS_FORMATS = ['flac', 'wav']
+const LOSSY_FORMATS = ['mp3', 'ogg']
+const ALLOWED_FORMATS = [...LOSSLESS_FORMATS, ...LOSSY_FORMATS]
 const MIN_BITRATE = 320
 
-// Quality ranking: higher is better
+// Quality ranking: higher is better (DJ-compatible only)
 const FORMAT_SCORES = {
 	flac: 1000,
 	wav: 900,
 	mp3: 100,
-	ogg: 100,
-	m4a: 100,
-	aac: 80
+	ogg: 100
 }
 
 // ===== HELPERS =====
@@ -73,21 +74,16 @@ const calculateScore = (file) => {
 }
 
 const buildSearchQuery = (title) => {
-	// Try to parse artist - title format
+	// get-artist-title handles cleanup: strips (Official Video), [Remastered], etc.
+	// but keeps DJ-relevant markers like (Dub Mix)
 	const parsed = getArtistTitle(title)
 	if (parsed) {
 		const [artist, trackTitle] = parsed
-		// Use both artist and title for better matching
 		return `${artist} ${trackTitle}`.trim()
 	}
 
-	// Fallback: clean up the title
-	return title
-		.replace(/\([^)]*(?:video|audio|official|remaster|remix|edit)[^)]*\)/gi, '')
-		.replace(/\[[^\]]*(?:video|audio|official|remaster)[^\]]*\]/gi, '')
-		.replace(/\s+(?:feat\.?|ft\.?|featuring)\s+/gi, ' ')
-		.replace(/\s+/g, ' ')
-		.trim()
+	// No "Artist - Title" format found, use title as-is
+	return title.trim()
 }
 
 // ===== CLIENT =====
@@ -175,7 +171,7 @@ export function createClient(config = {}) {
 
 		if (!searchResponse.ok) {
 			const text = await searchResponse.text()
-			throw new Error(`Search failed: ${text}`)
+			throw new Error(`search failed: ${text}`)
 		}
 
 		const {id: searchId} = await searchResponse.json()
@@ -201,9 +197,15 @@ export function createClient(config = {}) {
 		for (const response of responses) {
 			for (const file of response.files || []) {
 				const ext = extname(file.filename).slice(1).toLowerCase()
+				if (!ext) continue
+
+				// Only DJ-compatible formats
+				if (!ALLOWED_FORMATS.includes(ext)) continue
+
 				const bitrate = file.bitRate || 0
 				const isLossless = LOSSLESS_FORMATS.includes(ext)
 
+				// Lossless: always accept. Lossy: require minimum bitrate
 				if (isLossless || bitrate >= minBitrate) {
 					files.push({
 						username: response.username,
@@ -230,7 +232,7 @@ export function createClient(config = {}) {
 
 		if (!response.ok) {
 			const text = await response.text()
-			throw new Error(`Failed to queue download: ${text}`)
+			throw new Error(`failed to queue download: ${text}`)
 		}
 
 		return file.filename
@@ -271,29 +273,40 @@ export function createClient(config = {}) {
 				if (transfer.state === 'Completed' || transfer.state === 'Succeeded') {
 					// Find the actual file on disk
 					const downloadsDir = await getDownloadsDirectory()
-					const fileName = transfer.filename.split('\\').pop()
+					const fileName = transfer.filename.split(/[\\/]/).pop()
+					if (!fileName) {
+						throw new Error('downloaded file name is empty')
+					}
 					const localPath = await findDownloadedFile(downloadsDir, fileName)
+					if (!localPath) {
+						throw new Error(`downloaded file not found: ${fileName}`)
+					}
 					return {localPath, size: transfer.size}
 				}
 
 				if (['Errored', 'Rejected', 'Cancelled'].includes(transfer.state)) {
-					throw new Error(`Download failed: ${transfer.state}`)
+					throw new Error(`download failed: ${transfer.state}`)
 				}
 			}
 
 			await sleep(2000)
 		}
 
-		throw new Error('Download timed out')
+		throw new Error('download timed out')
 	}
 
 	async function getDownloadsDirectory() {
 		const response = await request('/options')
-		if (response.ok) {
-			const opts = await response.json()
-			return opts.directories?.downloads || '/app/downloads'
+		if (!response.ok) {
+			throw new Error(
+				'failed to get slskd options - cannot determine downloads directory'
+			)
 		}
-		return '/app/downloads'
+		const opts = await response.json()
+		if (!opts.directories?.downloads) {
+			throw new Error('slskd downloads directory not configured')
+		}
+		return opts.directories.downloads
 	}
 
 	return {checkConnection, search, queueDownload, waitForDownload}
@@ -358,47 +371,78 @@ export async function downloadTrack(client, track, outputDir, options = {}) {
  * Download multiple tracks with concurrency control
  */
 export async function downloadTracks(client, tracks, folderPath, options = {}) {
-	const {verbose = false, dryRun = false} = options
+	const {verbose = false, dryRun = false, concurrency = 1} = options
 
 	const results = {complete: [], no_match: [], failed: [], skipped: []}
-	const outputDir = join(folderPath, 'tracks')
+	const outputDir = join(folderPath, 'soulseek')
 
 	if (!dryRun) {
 		await mkdir(outputDir, {recursive: true})
 	}
 
-	// Soulseek only allows one concurrent search, so process sequentially
-	for (const [index, track] of tracks.entries()) {
-		const progress = `[${index + 1}/${tracks.length}]`
-
-		if (dryRun) {
+	if (dryRun) {
+		for (const [index, track] of tracks.entries()) {
+			const progress = `[${index + 1}/${tracks.length}]`
 			console.log(`${progress} Would search: ${track.title}`)
 			results.skipped.push(track)
-			continue
 		}
+		return results
+	}
 
-		try {
-			const result = await downloadTrack(client, track, outputDir, {
-				verbose,
-				...options
+	// Serialize searches while allowing concurrent downloads.
+	let searchQueue = Promise.resolve()
+	const clientWithSerializedSearch = {
+		...client,
+		search: async (...args) => {
+			const run = searchQueue.then(() => client.search(...args))
+			searchQueue = run.catch((err) => {
+				if (verbose) console.error('Search queue error:', err.message)
 			})
-
-			if (result.status === 'no_match') {
-				console.log(`${progress} No match: ${track.title}`)
-				results.no_match.push(track)
-			} else {
-				const quality = result.quality.isLossless
-					? result.quality.format.toUpperCase()
-					: `${result.quality.bitrate}kbps`
-				console.log(`${progress} Downloaded: ${track.title} (${quality})`)
-				results.complete.push(result)
-			}
-		} catch (error) {
-			console.error(`${progress} Failed: ${track.title}`)
-			if (verbose) console.error(`  ${error.message}`)
-			results.failed.push({track, error: error.message})
+			return run
 		}
 	}
+
+	const limit = Math.max(1, concurrency)
+	let nextIndex = 0
+
+	const workers = Array.from({length: limit}, async () => {
+		while (true) {
+			const index = nextIndex++
+			if (index >= tracks.length) return
+
+			const track = tracks[index]
+			const progress = `[${index + 1}/${tracks.length}]`
+
+			try {
+				const result = await downloadTrack(
+					clientWithSerializedSearch,
+					track,
+					outputDir,
+					{
+						verbose,
+						...options
+					}
+				)
+
+				if (result.status === 'no_match') {
+					console.log(`${progress} No match: ${track.title}`)
+					results.no_match.push(track)
+				} else {
+					const quality = result.quality.isLossless
+						? result.quality.format.toUpperCase()
+						: `${result.quality.bitrate}kbps`
+					console.log(`${progress} Downloaded: ${track.title} (${quality})`)
+					results.complete.push(result)
+				}
+			} catch (error) {
+				console.error(`${progress} Failed: ${track.title}`)
+				if (verbose) console.error(`  ${error.message}`)
+				results.failed.push({track, error: error.message})
+			}
+		}
+	})
+
+	await Promise.all(workers)
 
 	return results
 }

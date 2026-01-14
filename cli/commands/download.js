@@ -5,8 +5,10 @@ import {load as loadConfig} from '../lib/config.js'
 import {getChannel, listTracks} from '../lib/data.js'
 import {
 	downloadChannel,
+	readFailedTrackIds,
 	writeChannelAbout,
 	writeChannelImageUrl,
+	writeFailures,
 	writeTracksPlaylist
 } from '../lib/download.js'
 import {toFilename} from '../lib/filenames.js'
@@ -64,21 +66,18 @@ export default {
 			description:
 				'Number of concurrent downloads (youtube: 1-10, soulseek: 1-3)'
 		},
-		// Soulseek-specific options
+		// Soulseek-specific options (defaults come from config, then fallback)
 		'slskd-host': {
 			type: 'string',
-			default: 'localhost',
-			description: 'slskd host (default: localhost)'
+			description: 'slskd host (default: from config or localhost)'
 		},
 		'slskd-port': {
 			type: 'number',
-			default: 5030,
-			description: 'slskd port (default: 5030)'
+			description: 'slskd port (default: from config or 5030)'
 		},
 		'min-bitrate': {
 			type: 'number',
-			default: 320,
-			description: 'Minimum bitrate for lossy formats (soulseek only)'
+			description: 'Minimum bitrate for lossy formats (default: 320)'
 		}
 	},
 
@@ -111,18 +110,20 @@ export default {
 		}
 		console.log()
 
-		// Write channel context files (unless dry run)
+		// Ensure output folder exists
 		if (!dryRun) {
 			await mkdir(folderPath, {recursive: true})
 
-			console.log(`${folderPath}/`)
-			await writeChannelAbout(channel, tracks, folderPath, {verbose})
-			console.log(`├── ${channel.slug}.txt`)
-			await writeChannelImageUrl(channel, folderPath, {verbose})
-			console.log('├── image.url')
-			await writeTracksPlaylist(tracks, folderPath, {verbose})
-			console.log(`└── tracks.m3u (try: mpv ${folderPath}/tracks.m3u)`)
-			console.log()
+			if (!noMetadata) {
+				console.log(`${folderPath}/`)
+				await writeChannelAbout(channel, tracks, folderPath, {verbose})
+				console.log(`├── ${channel.slug}.txt`)
+				await writeChannelImageUrl(channel, folderPath, {verbose})
+				console.log('├── image.url')
+				await writeTracksPlaylist(tracks, folderPath, {verbose})
+				console.log(`└── tracks.m3u (try: mpv ${folderPath}/tracks.m3u)`)
+				console.log()
+			}
 		}
 
 		// Branch based on source
@@ -131,6 +132,7 @@ export default {
 				dryRun,
 				verbose,
 				force: values.force,
+				retryFailed: values['retry-failed'],
 				concurrency: Math.min(values.concurrency, 3), // Soulseek is slower, limit concurrency
 				host: values['slskd-host'],
 				port: values['slskd-port'],
@@ -195,25 +197,28 @@ async function downloadFromSoulseek(tracks, folderPath, options = {}) {
 		dryRun = false,
 		verbose = false,
 		force = false,
+		retryFailed = false,
 		concurrency = 2,
-		host = 'localhost',
-		port = 5030,
+		host,
+		port,
 		minBitrate = 320
 	} = options
 
-	// Load config for slskd credentials
+	// Load config for slskd credentials (CLI args override config, then defaults)
 	const config = await loadConfig()
 	const slskdConfig = {
-		host,
-		port,
-		...config.soulseek
+		...config.soulseek,
+		host: host ?? config.soulseek?.host ?? 'localhost',
+		port: port ?? config.soulseek?.port ?? 5030
 	}
+	const effectiveHost = slskdConfig.host
+	const effectivePort = slskdConfig.port
 
 	// Create client and verify connection
 	const client = createSoulseekClient(slskdConfig)
 
 	if (!dryRun) {
-		console.log(`Connecting to slskd at ${host}:${port}...`)
+		console.log(`Connecting to slskd at ${effectiveHost}:${effectivePort}...`)
 		try {
 			await client.checkConnection()
 			console.log('Connected to slskd')
@@ -233,25 +238,38 @@ async function downloadFromSoulseek(tracks, folderPath, options = {}) {
 	}
 
 	// Filter tracks that already exist
-	const tracksDir = join(folderPath, 'tracks')
+	const soulseekDir = join(folderPath, 'soulseek')
+	const failedIds = retryFailed ? new Set() : readFailedTrackIds(folderPath)
+	// DJ-compatible formats only (CDJ/Rekordbox/Traktor/Serato)
+	const supportedExtensions = ['flac', 'wav', 'mp3', 'ogg']
+	const hasExistingFile = (track) => {
+		const baseFilename = toFilename(track, {source: 'soulseek'})
+		for (const ext of supportedExtensions) {
+			if (existsSync(join(soulseekDir, `${baseFilename}.${ext}`))) {
+				return true
+			}
+		}
+		return false
+	}
 	const toDownload = force
 		? tracks
 		: tracks.filter((track) => {
-				// Check if any file matching this track exists
-				const baseFilename = toFilename(track, {source: 'soulseek'})
-				// Check common extensions
-				for (const ext of ['flac', 'mp3', 'wav', 'ogg', 'm4a']) {
-					if (existsSync(join(tracksDir, `${baseFilename}.${ext}`))) {
-						return false
-					}
+				if (failedIds.has(track.id)) {
+					return false
 				}
-				return true
+				return !hasExistingFile(track)
 			})
 
-	const existing = tracks.length - toDownload.length
+	const existing = tracks.filter((track) => hasExistingFile(track)).length
+	const previouslyFailed = tracks.filter((track) =>
+		failedIds.has(track.id)
+	).length
 
 	console.log(`Total tracks: ${tracks.length}`)
 	console.log(`  Already exists: ${existing}`)
+	if (previouslyFailed > 0) {
+		console.log(`  Previously failed: ${previouslyFailed}`)
+	}
 	console.log(`  To download: ${toDownload.length}`)
 	console.log(`  Concurrency: ${concurrency}`)
 	console.log(`  Min bitrate: ${minBitrate}kbps (or lossless)`)
@@ -289,6 +307,10 @@ async function downloadFromSoulseek(tracks, folderPath, options = {}) {
 	console.log(`  No match found: ${results.no_match.length}`)
 	console.log(`  Failed: ${results.failed.length}`)
 
+	if (results.failed.length > 0) {
+		await writeFailures(results.failed, folderPath, {verbose})
+	}
+
 	if (results.no_match.length > 0) {
 		console.log()
 		console.log(
@@ -307,6 +329,7 @@ async function downloadFromSoulseek(tracks, folderPath, options = {}) {
 	if (results.failed.length > 0) {
 		console.log()
 		console.log(`⚠ ${results.failed.length} tracks failed to download`)
+		console.log(`  See: ${folderPath}/failures.jsonl`)
 		if (verbose) {
 			for (const {track, error} of results.failed.slice(0, 5)) {
 				console.log(`  - ${track.title}: ${error}`)

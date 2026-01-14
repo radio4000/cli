@@ -1,10 +1,10 @@
 import {expect, mock, test} from 'bun:test'
-import {createClient, downloadTrack, downloadTracks} from './soulseek.js'
+import {createClient, downloadTrack} from './soulseek.js'
 
 // Mock fetch for testing without real slskd
 const mockFetch = (responses) => {
 	let callIndex = 0
-	return mock((url, options) => {
+	return mock((_url, _options) => {
 		const response = responses[callIndex] || responses[responses.length - 1]
 		callIndex++
 		return Promise.resolve({
@@ -90,64 +90,38 @@ test('search returns ranked results filtered by quality', async () => {
 	globalThis.fetch = originalFetch
 })
 
-test('buildSearchQuery cleans up track titles', async () => {
-	// Test the search query building by checking what gets passed to the API
-	const originalFetch = globalThis.fetch
-	let capturedSearchText = null
-
-	globalThis.fetch = mock((url, options) => {
-		if (url.includes('/searches/text') && options?.body) {
-			const body = JSON.parse(options.body)
-			capturedSearchText = body.searchText
-		}
-
-		// Return appropriate response based on URL
-		if (url.includes('/session')) {
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve({token: 'test-token'}),
-				text: () => Promise.resolve('')
-			})
-		}
-		if (url.includes('/searches/text')) {
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve({id: 'test-search'}),
-				text: () => Promise.resolve('')
-			})
-		}
-		if (url.includes('/searches/test-search/responses')) {
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve([]),
-				text: () => Promise.resolve('')
-			})
-		}
-		if (url.includes('/searches/test-search')) {
-			return Promise.resolve({
-				ok: true,
-				json: () => Promise.resolve({state: 'Completed', isComplete: true}),
-				text: () => Promise.resolve('')
-			})
-		}
-		return Promise.resolve({
-			ok: true,
-			json: () => Promise.resolve({}),
-			text: () => Promise.resolve('')
+test('buildSearchQuery uses get-artist-title to parse and clean', async () => {
+	let capturedQuery = null
+	const client = {
+		search: mock(async (query) => {
+			capturedQuery = query
+			return []
 		})
-	})
+	}
 
-	const client = createClient()
+	// get-artist-title strips (Official Video) and [Remastered] but keeps (Dub Mix)
+	const track = {
+		id: 'track-1',
+		title: 'Artist - Song (Official Video) [Remastered]'
+	}
+	await downloadTrack(client, track, '/tmp/test', {})
 
-	// Search with a messy title
-	await client.search('Artist - Song (Official Video) [Remastered]', {
-		timeout: 100
-	})
+	expect(capturedQuery).toBe('Artist Song')
+})
 
-	// Should have cleaned up the title
-	expect(capturedSearchText).toBe('Artist - Song')
+test('buildSearchQuery preserves DJ-relevant markers', async () => {
+	let capturedQuery = null
+	const client = {
+		search: mock(async (query) => {
+			capturedQuery = query
+			return []
+		})
+	}
 
-	globalThis.fetch = originalFetch
+	const track = {id: 'track-2', title: 'Artist - Song (Dub Mix)'}
+	await downloadTrack(client, track, '/tmp/test', {})
+
+	expect(capturedQuery).toBe('Artist Song (Dub Mix)')
 })
 
 test('downloadTrack returns no_match when no results', async () => {
@@ -216,3 +190,6 @@ test('quality scoring prefers lossless over high bitrate', () => {
 		globalThis.fetch = originalFetch
 	})
 })
+
+// Note: Title cleaning is handled by get-artist-title library
+// It strips (Official Video), [Remastered], etc. but keeps DJ-relevant markers like (Dub Mix)
