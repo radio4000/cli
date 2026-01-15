@@ -70,7 +70,12 @@ test('search returns ranked results filtered by quality', async () => {
 
 	globalThis.fetch = mockFetch(mockResponses)
 
-	const client = createClient({host: 'localhost', port: 5030, username: 'slskd', password: 'slskd'})
+	const client = createClient({
+		host: 'localhost',
+		port: 5030,
+		username: 'slskd',
+		password: 'slskd'
+	})
 	const results = await client.search('Artist Song', {
 		timeout: 1000,
 		minBitrate: 320
@@ -135,7 +140,12 @@ test('downloadTrack returns no_match when no results', async () => {
 		{data: []} // No results
 	])
 
-	const client = createClient({host: 'localhost', port: 5030, username: 'slskd', password: 'slskd'})
+	const client = createClient({
+		host: 'localhost',
+		port: 5030,
+		username: 'slskd',
+		password: 'slskd'
+	})
 	const track = {id: 'track-1', title: 'Unknown Artist - Rare Song'}
 
 	const result = await downloadTrack(client, track, '/tmp/test', {})
@@ -180,7 +190,12 @@ test('quality scoring prefers lossless over high bitrate', () => {
 
 	globalThis.fetch = mockFetch(mockResponses)
 
-	const client = createClient({host: 'localhost', port: 5030, username: 'slskd', password: 'slskd'})
+	const client = createClient({
+		host: 'localhost',
+		port: 5030,
+		username: 'slskd',
+		password: 'slskd'
+	})
 
 	return client.search('test', {timeout: 100}).then((results) => {
 		// FLAC should be first despite being from user2

@@ -118,16 +118,24 @@ export default {
 
 		// Download via source
 		if (source === 'soulseek') {
+			// Build slskdConfig by merging CLI options with config.soulseek
+			const slskdDownloadsDir =
+				values['slskd-downloads-dir'] ??
+				(config.downloadsDir ? join(config.downloadsDir, 'slskd') : null)
+			const slskdConfig = {
+				...config.soulseek,
+				host: values['slskd-host'] ?? config.soulseek.host,
+				port: values['slskd-port'] ?? config.soulseek.port,
+				downloadsDir: slskdDownloadsDir
+			}
 			await downloadSoulseek(tracks, folderPath, {
 				dryRun,
 				verbose,
 				force: values.force,
 				retryFailed: values['retry-failed'],
 				concurrency: Math.min(values.concurrency, 3),
-				host: values['slskd-host'],
-				port: values['slskd-port'],
 				minBitrate: values['min-bitrate'],
-				downloadsDir: values['slskd-downloads-dir']
+				slskdConfig
 			})
 			return ''
 		}

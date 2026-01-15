@@ -12,7 +12,6 @@ import {existsSync} from 'node:fs'
 import {copyFile, mkdir, unlink} from 'node:fs/promises'
 import {extname, join} from 'node:path'
 import getArtistTitle from 'get-artist-title'
-import {load as loadConfig} from './config.js'
 import {readFailedTrackIds, writeFailures} from './download.js'
 import {toFilename} from './filenames.js'
 
@@ -462,6 +461,11 @@ export async function downloadTracks(client, tracks, folderPath, options = {}) {
 /**
  * Download a channel's tracks from Soulseek
  * Matches the API of downloadChannel in lib/download.js for consistency
+ *
+ * @param {Array} tracks - Tracks to download
+ * @param {string} folderPath - Output folder path
+ * @param {Object} options - Download options
+ * @param {Object} options.slskdConfig - slskd client config (host, port, username, password, downloadsDir)
  */
 export async function downloadChannel(tracks, folderPath, options = {}) {
 	const {
@@ -470,22 +474,12 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 		force = false,
 		retryFailed = false,
 		concurrency = 2,
-		host,
-		port,
 		minBitrate = 320,
-		downloadsDir
+		slskdConfig
 	} = options
 
-	// Load config (already has defaults from config.js)
-	const config = await loadConfig()
-	const slskdDownloadsDir =
-		downloadsDir ??
-		(config.downloadsDir ? join(config.downloadsDir, 'slskd') : null)
-	const slskdConfig = {
-		...config.soulseek,
-		host: host ?? config.soulseek.host,
-		port: port ?? config.soulseek.port,
-		downloadsDir: slskdDownloadsDir
+	if (!slskdConfig) {
+		throw new Error('slskdConfig is required')
 	}
 
 	// Create client and verify connection
