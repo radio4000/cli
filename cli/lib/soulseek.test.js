@@ -96,10 +96,10 @@ test('search returns ranked results filtered by quality', async () => {
 })
 
 test('buildSearchQuery uses get-artist-title to parse and clean', async () => {
-	let capturedQuery = null
+	const capturedQueries = []
 	const client = {
 		search: mock(async (query) => {
-			capturedQuery = query
+			capturedQueries.push(query)
 			return []
 		})
 	}
@@ -111,14 +111,14 @@ test('buildSearchQuery uses get-artist-title to parse and clean', async () => {
 	}
 	await downloadTrack(client, track, '/tmp/test', {})
 
-	expect(capturedQuery).toBe('Artist Song')
+	expect(capturedQueries[0]).toBe('Artist Song')
 })
 
 test('buildSearchQuery strips all parenthetical content for better Soulseek search', async () => {
-	let capturedQuery = null
+	const capturedQueries = []
 	const client = {
 		search: mock(async (query) => {
-			capturedQuery = query
+			capturedQueries.push(query)
 			return []
 		})
 	}
@@ -127,7 +127,7 @@ test('buildSearchQuery strips all parenthetical content for better Soulseek sear
 	await downloadTrack(client, track, '/tmp/test', {})
 
 	// Parenthetical content stripped for search - Soulseek works better with simpler queries
-	expect(capturedQuery).toBe('Artist Song')
+	expect(capturedQueries[0]).toBe('Artist Song')
 })
 
 test('downloadTrack returns no_match when no results', async () => {

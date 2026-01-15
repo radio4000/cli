@@ -69,16 +69,77 @@ const calculateScore = (file) => {
 	return score
 }
 
+const stripBracketed = (text) => text.replace(/\s*[[(][^\])]*[\])]/g, '').trim()
+const normalizeText = (text) =>
+	stripBracketed(text)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.trim()
+
+const parseArtistTitle = (text) => {
+	const parsed = getArtistTitle(text)
+	if (!parsed) return null
+	const [artist, title] = parsed
+	if (!artist && !title) return null
+	return {artist, title}
+}
+
 const buildSearchQuery = (title) => {
 	// get-artist-title handles basic cleanup
 	const parsed = getArtistTitle(title)
-	let query = parsed ? `${parsed[0]} ${parsed[1]}` : title
+	const query = parsed ? `${parsed[0]} ${parsed[1]}` : title
 
 	// Strip parenthetical/bracketed content for search - Soulseek search
 	// works better with simpler queries, and results include all versions anyway
-	query = query.replace(/\s*[[(][^\])]*[\])]/g, '')
+	return stripBracketed(query)
+}
 
-	return query.trim()
+const buildSearchQueries = (title) => {
+	const queries = []
+	const addQuery = (query) => {
+		const trimmed = query.trim()
+		if (!trimmed) return
+		if (!queries.includes(trimmed)) queries.push(trimmed)
+	}
+
+	const parsedQuery = buildSearchQuery(title)
+	addQuery(parsedQuery)
+
+	const rawQuery = stripBracketed(title)
+	addQuery(rawQuery)
+
+	const compactHyphenQuery = rawQuery.replace(/\s*-\s*/g, '-')
+	addQuery(compactHyphenQuery)
+
+	return queries
+}
+
+const filterResultsByTrack = (files, trackTitle) => {
+	const trackParsed = parseArtistTitle(trackTitle)
+	const trackComposite = trackParsed
+		? normalizeText(`${trackParsed.artist} ${trackParsed.title}`)
+		: normalizeText(trackTitle)
+
+	if (!trackComposite) return files
+
+	const filtered = files.filter((file) => {
+		const fileName = file.filename.split(/[\\/]/).pop() || ''
+		const ext = extname(fileName)
+		const stem = ext ? fileName.slice(0, -ext.length) : fileName
+		const parsed = parseArtistTitle(stem)
+		if (!parsed) return false
+
+		const fileComposite = normalizeText(`${parsed.artist} ${parsed.title}`)
+		if (!fileComposite) return false
+
+		return (
+			fileComposite === trackComposite ||
+			fileComposite.includes(trackComposite) ||
+			trackComposite.includes(fileComposite)
+		)
+	})
+
+	return filtered.length > 0 ? filtered : files
 }
 
 // ===== CLIENT =====
@@ -322,20 +383,28 @@ export function createClient(config) {
  */
 export async function downloadTrack(client, track, outputDir, options = {}) {
 	const {verbose = false, minBitrate = MIN_BITRATE} = options
-	const query = buildSearchQuery(track.title)
+	const queries = buildSearchQueries(track.title)
+	let results = []
+	let query = null
 
-	if (verbose) console.log(`  Searching: "${query}"`)
+	for (const candidate of queries) {
+		query = candidate
+		if (verbose) console.log(`  Searching: "${query}"`)
 
-	const results = await client.search(query, {
-		timeout: options.searchTimeout || 15000,
-		minBitrate
-	})
+		results = await client.search(query, {
+			timeout: options.searchTimeout || 15000,
+			minBitrate
+		})
 
-	if (results.length === 0) {
-		return {status: 'no_match', track, query}
+		if (results.length > 0) break
 	}
 
-	const best = results[0]
+	if (results.length === 0) {
+		return {status: 'no_match', track, query: queries[0] || track.title}
+	}
+
+	const filteredResults = filterResultsByTrack(results, track.title)
+	const best = filteredResults[0]
 
 	if (verbose) {
 		const quality = best.isLossless
