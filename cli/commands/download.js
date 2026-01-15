@@ -3,12 +3,12 @@ import {join, resolve} from 'node:path'
 import {load as loadConfig} from '../lib/config.js'
 import {getChannel, listTracks} from '../lib/data.js'
 import {
-	downloadChannel as downloadYouTube,
+	downloadChannel,
 	writeChannelAbout,
 	writeChannelImageUrl,
 	writeTracksPlaylist
 } from '../lib/download.js'
-import {downloadChannel as downloadSoulseek} from '../lib/soulseek.js'
+import {downloadChannel as downloadChannelSoulseek} from '../lib/soulseek.js'
 import {parse} from '../utils.js'
 
 export default {
@@ -69,7 +69,7 @@ export default {
 		'slskd-downloads-dir': {
 			type: 'string',
 			description:
-				'Host path where slskd saves downloads (default: /tmp/radio4000/slskd)'
+				'Temp folder where slskd saves files before moving to channel (default: /tmp/radio4000/slskd)'
 		}
 	},
 
@@ -123,7 +123,7 @@ export default {
 				port: values['slskd-port'] ?? config.soulseek.port,
 				downloadsDir: slskdDownloadsDir
 			}
-			await downloadSoulseek(tracks, folderPath, {
+			await downloadChannelSoulseek(tracks, folderPath, {
 				dryRun,
 				verbose,
 				force: values.force,
@@ -135,8 +135,8 @@ export default {
 			return ''
 		}
 
-		// YouTube via yt-dlp
-		const result = await downloadYouTube(tracks, folderPath, {
+		// Default: yt-dlp (supports YouTube, SoundCloud, Bandcamp, etc.)
+		const result = await downloadChannel(tracks, folderPath, {
 			force: values.force,
 			retryFailed: values['retry-failed'],
 			dryRun,

@@ -4,6 +4,7 @@
  */
 
 import filenamify from 'filenamify'
+import {detectMediaProvider, extractYouTubeId} from './media.js'
 
 /**
  * Create safe filename from track (no path, no extension)
@@ -21,25 +22,26 @@ export function toFilename(track, options = {}) {
 		throw new Error(`Invalid track title: ${JSON.stringify(track.title)}`)
 	}
 
-	// Sanitize title first
-	const cleanTitle = filenamify(track.title, {
+	// Remove characters not allowed in filenames
+	const safeTitle = filenamify(track.title, {
 		maxLength: 180 // Leave room for ID suffix
 	})
 
-	// Add media ID suffix if available (for uniqueness)
-	if (track.media_id) {
-		return `${cleanTitle} [${track.media_id}]`
-	}
-
 	// Soulseek: use r4 track ID for uniqueness
 	if (source === 'soulseek') {
-			if (track.id) {
-					return `${cleanTitle} [r4-${track.id.slice(0, 8)}]`
-			}
-			return cleanTitle
+		if (track.id) {
+			return `${safeTitle} [r4-${track.id.slice(0, 8)}]`
+		}
+		return safeTitle
 	}
 
-	return cleanTitle
+	// YouTube: add YouTube ID suffix if available (for uniqueness)
+	const ytId = extractYouTubeId(track.url)
+	if (ytId) {
+		return `${safeTitle} [${ytId}]`
+	}
+
+	return safeTitle
 }
 
 /**
