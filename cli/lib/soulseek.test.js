@@ -109,7 +109,7 @@ test('buildSearchQuery uses get-artist-title to parse and clean', async () => {
 	expect(capturedQuery).toBe('Artist Song')
 })
 
-test('buildSearchQuery preserves DJ-relevant markers', async () => {
+test('buildSearchQuery strips all parenthetical content for better Soulseek search', async () => {
 	let capturedQuery = null
 	const client = {
 		search: mock(async (query) => {
@@ -121,7 +121,8 @@ test('buildSearchQuery preserves DJ-relevant markers', async () => {
 	const track = {id: 'track-2', title: 'Artist - Song (Dub Mix)'}
 	await downloadTrack(client, track, '/tmp/test', {})
 
-	expect(capturedQuery).toBe('Artist Song (Dub Mix)')
+	// Parenthetical content stripped for search - Soulseek works better with simpler queries
+	expect(capturedQuery).toBe('Artist Song')
 })
 
 test('downloadTrack returns no_match when no results', async () => {

@@ -6,8 +6,10 @@ const configPath = join(homedir(), '.config', 'radio4000', 'config.json')
 
 const defaults = {
 	auth: {session: null},
+	// Base directory for all downloads (channels saved as subfolders)
+	downloadsDir: null,
+	// slskd connection settings (optional, defaults work for local Docker)
 	soulseek: {
-		// slskd connection settings
 		host: 'localhost',
 		port: 5030,
 		username: 'slskd',

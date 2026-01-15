@@ -9,7 +9,7 @@
  */
 
 import {existsSync} from 'node:fs'
-import {mkdir, rename} from 'node:fs/promises'
+import {copyFile, mkdir, unlink} from 'node:fs/promises'
 import {extname, join} from 'node:path'
 import getArtistTitle from 'get-artist-title'
 import {toFilename} from './filenames.js'
@@ -74,16 +74,15 @@ const calculateScore = (file) => {
 }
 
 const buildSearchQuery = (title) => {
-	// get-artist-title handles cleanup: strips (Official Video), [Remastered], etc.
-	// but keeps DJ-relevant markers like (Dub Mix)
+	// get-artist-title handles basic cleanup
 	const parsed = getArtistTitle(title)
-	if (parsed) {
-		const [artist, trackTitle] = parsed
-		return `${artist} ${trackTitle}`.trim()
-	}
+	let query = parsed ? `${parsed[0]} ${parsed[1]}` : title
 
-	// No "Artist - Title" format found, use title as-is
-	return title.trim()
+	// Strip parenthetical/bracketed content for search - Soulseek search
+	// works better with simpler queries, and results include all versions anyway
+	query = query.replace(/\s*[[(][^\])]*[\])]/g, '')
+
+	return query.trim()
 }
 
 // ===== CLIENT =====
@@ -270,7 +269,11 @@ export function createClient(config = {}) {
 			if (transfer) {
 				if (onProgress) onProgress(transfer)
 
-				if (transfer.state === 'Completed' || transfer.state === 'Succeeded') {
+				// State can be "Completed", "Succeeded", or "Completed, Succeeded"
+				const isComplete =
+					transfer.state?.includes('Completed') ||
+					transfer.state?.includes('Succeeded')
+				if (isComplete) {
 					// Find the actual file on disk
 					const downloadsDir = await getDownloadsDirectory()
 					const fileName = transfer.filename.split(/[\\/]/).pop()
@@ -284,7 +287,11 @@ export function createClient(config = {}) {
 					return {localPath, size: transfer.size}
 				}
 
-				if (['Errored', 'Rejected', 'Cancelled'].includes(transfer.state)) {
+				const isFailed =
+					transfer.state?.includes('Errored') ||
+					transfer.state?.includes('Rejected') ||
+					transfer.state?.includes('Cancelled')
+				if (isFailed) {
 					throw new Error(`download failed: ${transfer.state}`)
 				}
 			}
@@ -296,6 +303,10 @@ export function createClient(config = {}) {
 	}
 
 	async function getDownloadsDirectory() {
+		// Allow override for Docker setups where container path differs from host path
+		if (config.downloadsDir) {
+			return config.downloadsDir
+		}
 		const response = await request('/options')
 		if (!response.ok) {
 			throw new Error(
@@ -347,12 +358,18 @@ export async function downloadTrack(client, track, outputDir, options = {}) {
 		maxWait: options.downloadTimeout || 300000
 	})
 
-	// Move to output with proper naming
+	// Copy to output with proper naming (copy instead of rename for Docker/permission compat)
 	const baseFilename = toFilename(track, {source: 'soulseek'})
 	const destPath = join(outputDir, `${baseFilename}.${best.extension}`)
 
 	if (existsSync(result.localPath) && !existsSync(destPath)) {
-		await rename(result.localPath, destPath)
+		await copyFile(result.localPath, destPath)
+		// Try to remove source, but don't fail if we can't (Docker permissions)
+		try {
+			await unlink(result.localPath)
+		} catch {
+			// Ignore - file will stay in slskd downloads folder
+		}
 	}
 
 	return {

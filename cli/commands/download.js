@@ -78,6 +78,11 @@ export default {
 		'min-bitrate': {
 			type: 'number',
 			description: 'Minimum bitrate for lossy formats (default: 320)'
+		},
+		'slskd-downloads-dir': {
+			type: 'string',
+			description:
+				'Override slskd downloads directory (for Docker setups where host path differs)'
 		}
 	},
 
@@ -94,7 +99,10 @@ export default {
 			throw new Error(`Invalid source: ${source}. Use 'youtube' or 'soulseek'`)
 		}
 
-		const folderPath = resolve(values.output || `./${slug}`)
+		// Load config for default paths
+		const config = await loadConfig()
+		const baseDir = values.output || config.downloadsDir || '.'
+		const folderPath = resolve(join(baseDir, slug))
 		const dryRun = values['dry-run']
 		const verbose = values.verbose
 		const noMetadata = values['no-metadata']
@@ -136,7 +144,8 @@ export default {
 				concurrency: Math.min(values.concurrency, 3), // Soulseek is slower, limit concurrency
 				host: values['slskd-host'],
 				port: values['slskd-port'],
-				minBitrate: values['min-bitrate']
+				minBitrate: values['min-bitrate'],
+				downloadsDir: values['slskd-downloads-dir']
 			})
 		}
 
@@ -175,16 +184,21 @@ export default {
 	},
 
 	examples: [
+		'# YouTube downloads (default)',
 		'r4 download ko002',
-		'r4 download ko002 --source soulseek',
 		'r4 download ko002 --limit 10',
 		'r4 download ko002 --output ./my-music',
 		'r4 download ko002 --dry-run',
-		'r4 download ko002 --force',
-		'r4 download ko002 --retry-failed',
-		'r4 download ko002 --no-metadata',
-		'r4 download ko002 --concurrency 5',
+		'',
+		'# Soulseek downloads (requires slskd)',
+		'# Start slskd: docker run -d --network host -e SLSKD_SLSK_USERNAME=user -e SLSKD_SLSK_PASSWORD=pass -v ~/Music/slskd:/app/downloads slskd/slskd',
+		'r4 download ko002 --source soulseek --slskd-downloads-dir ~/Music/slskd',
 		'r4 download ko002 --source soulseek --min-bitrate 256',
+		'',
+		'# Output structure:',
+		'#   ko002/tracks/     - YouTube downloads (mp3/opus)',
+		'#   ko002/soulseek/   - Soulseek downloads (flac/wav/mp3)',
+		'',
 		'mpv ko002/tracks.m3u'
 	]
 }
@@ -201,15 +215,20 @@ async function downloadFromSoulseek(tracks, folderPath, options = {}) {
 		concurrency = 2,
 		host,
 		port,
-		minBitrate = 320
+		minBitrate = 320,
+		downloadsDir
 	} = options
 
 	// Load config for slskd credentials (CLI args override config, then defaults)
 	const config = await loadConfig()
+	// slskd downloads dir: CLI flag > config.downloadsDir/slskd > none (uses slskd API)
+	const slskdDownloadsDir =
+		downloadsDir ?? (config.downloadsDir ? join(config.downloadsDir, 'slskd') : null)
 	const slskdConfig = {
 		...config.soulseek,
 		host: host ?? config.soulseek?.host ?? 'localhost',
-		port: port ?? config.soulseek?.port ?? 5030
+		port: port ?? config.soulseek?.port ?? 5030,
+		downloadsDir: slskdDownloadsDir
 	}
 	const effectiveHost = slskdConfig.host
 	const effectivePort = slskdConfig.port
