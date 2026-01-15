@@ -17,17 +17,21 @@ const defaults = {
 	}
 }
 
-/** Load config from disk, return defaults if missing */
+/** Load config from disk, deep-merged with defaults */
 export async function load() {
 	try {
 		const data = await readFile(configPath, 'utf-8')
-		return {...defaults, ...JSON.parse(data)}
+		const userConfig = JSON.parse(data)
+		// Deep merge so nested defaults (like soulseek.host) are preserved
+		return {
+			...defaults,
+			...userConfig,
+			soulseek: {...defaults.soulseek, ...userConfig.soulseek}
+		}
 	} catch (error) {
-		// File doesn't exist yet - return defaults
 		if (error.code === 'ENOENT') {
 			return defaults
 		}
-		// File exists but we can't read/parse it - that's a real error
 		throw new Error(
 			`Failed to load config from ${configPath}: ${error.message}`
 		)

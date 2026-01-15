@@ -12,19 +12,16 @@ import {existsSync} from 'node:fs'
 import {copyFile, mkdir, unlink} from 'node:fs/promises'
 import {extname, join} from 'node:path'
 import getArtistTitle from 'get-artist-title'
+import {load as loadConfig} from './config.js'
+import {readFailedTrackIds, writeFailures} from './download.js'
 import {toFilename} from './filenames.js'
 
 // ===== CONSTANTS =====
 
-const DEFAULT_HOST = 'localhost'
-const DEFAULT_PORT = 5030
-const DEFAULT_USERNAME = 'slskd'
-const DEFAULT_PASSWORD = 'slskd'
-
 // DJ-compatible formats (CDJ/Rekordbox/Traktor/Serato compatible)
 const LOSSLESS_FORMATS = ['flac', 'wav']
 const LOSSY_FORMATS = ['mp3', 'ogg']
-const ALLOWED_FORMATS = [...LOSSLESS_FORMATS, ...LOSSY_FORMATS]
+export const ALLOWED_FORMATS = [...LOSSLESS_FORMATS, ...LOSSY_FORMATS]
 const MIN_BITRATE = 320
 
 // Quality ranking: higher is better (DJ-compatible only)
@@ -91,16 +88,12 @@ const buildSearchQuery = (title) => {
  * Create slskd API client
  * Returns an object with methods to search and download from Soulseek
  */
-export function createClient(config = {}) {
-	const host = config.host || DEFAULT_HOST
-	const port = config.port || DEFAULT_PORT
+export function createClient(config) {
+	const {host, port, username, password} = config
 	const baseUrl = `http://${host}:${port}/api/v0`
 	let token = null
 
 	async function authenticate() {
-		const username = config.username || DEFAULT_USERNAME
-		const password = config.password || DEFAULT_PASSWORD
-
 		const response = await fetch(`${baseUrl}/session`, {
 			method: 'POST',
 			headers: {'Content-Type': 'application/json'},
@@ -462,4 +455,162 @@ export async function downloadTracks(client, tracks, folderPath, options = {}) {
 	await Promise.all(workers)
 
 	return results
+}
+
+// ===== CHANNEL DOWNLOAD (matches lib/download.js API) =====
+
+/**
+ * Download a channel's tracks from Soulseek
+ * Matches the API of downloadChannel in lib/download.js for consistency
+ */
+export async function downloadChannel(tracks, folderPath, options = {}) {
+	const {
+		dryRun = false,
+		verbose = false,
+		force = false,
+		retryFailed = false,
+		concurrency = 2,
+		host,
+		port,
+		minBitrate = 320,
+		downloadsDir
+	} = options
+
+	// Load config (already has defaults from config.js)
+	const config = await loadConfig()
+	const slskdDownloadsDir =
+		downloadsDir ??
+		(config.downloadsDir ? join(config.downloadsDir, 'slskd') : null)
+	const slskdConfig = {
+		...config.soulseek,
+		host: host ?? config.soulseek.host,
+		port: port ?? config.soulseek.port,
+		downloadsDir: slskdDownloadsDir
+	}
+
+	// Create client and verify connection
+	const client = createClient(slskdConfig)
+
+	if (!dryRun) {
+		console.log(
+			`Connecting to slskd at ${slskdConfig.host}:${slskdConfig.port}...`
+		)
+		try {
+			await client.checkConnection()
+			console.log('Connected to slskd')
+			console.log()
+		} catch (error) {
+			console.error(`Failed to connect to slskd: ${error.message}`)
+			console.error()
+			console.error('Make sure slskd is running:')
+			console.error(
+				'  docker run -d --network host -e SLSKD_SLSK_USERNAME=user -e SLSKD_SLSK_PASSWORD=pass slskd/slskd'
+			)
+			console.error()
+			console.error('Or configure in ~/.config/radio4000/config.json')
+			throw error
+		}
+	}
+
+	// Filter tracks that already exist
+	const soulseekDir = join(folderPath, 'soulseek')
+	const failedIds = retryFailed ? new Set() : readFailedTrackIds(folderPath)
+
+	const hasExistingFile = (track) => {
+		const baseFilename = toFilename(track, {source: 'soulseek'})
+		return ALLOWED_FORMATS.some((ext) =>
+			existsSync(join(soulseekDir, `${baseFilename}.${ext}`))
+		)
+	}
+
+	const toDownload = force
+		? tracks
+		: tracks.filter((t) => !failedIds.has(t.id) && !hasExistingFile(t))
+
+	const existing = tracks.filter(hasExistingFile).length
+	const previouslyFailed = tracks.filter((t) => failedIds.has(t.id)).length
+
+	console.log(`Total tracks: ${tracks.length}`)
+	console.log(`  Already exists: ${existing}`)
+	if (previouslyFailed > 0) {
+		console.log(`  Previously failed: ${previouslyFailed}`)
+	}
+	console.log(`  To download: ${toDownload.length}`)
+	console.log(`  Concurrency: ${concurrency}`)
+	console.log(`  Min bitrate: ${minBitrate}kbps (or lossless)`)
+	console.log()
+
+	if (dryRun) {
+		console.log('Would search and download:')
+		for (const track of toDownload.slice(0, 5)) {
+			console.log(`  ${track.title}`)
+		}
+		if (toDownload.length > 5) {
+			console.log(`  [...${toDownload.length - 5} more]`)
+		}
+		return {
+			total: tracks.length,
+			downloaded: 0,
+			existing,
+			noMatch: 0,
+			failed: 0,
+			failures: []
+		}
+	}
+
+	if (toDownload.length === 0) {
+		console.log('Nothing to download.')
+		return {
+			total: tracks.length,
+			downloaded: 0,
+			existing,
+			noMatch: 0,
+			failed: 0,
+			failures: []
+		}
+	}
+
+	// Download tracks
+	const results = await downloadTracks(client, toDownload, folderPath, {
+		concurrency,
+		verbose,
+		minBitrate
+	})
+
+	// Write failures
+	if (results.failed.length > 0) {
+		await writeFailures(results.failed, folderPath, {verbose})
+	}
+
+	// Summary
+	console.log()
+	console.log('Summary:')
+	console.log(`  Total: ${tracks.length}`)
+	console.log(`  Downloaded: ${results.complete.length}`)
+	console.log(`  Already exists: ${existing}`)
+	console.log(`  No match found: ${results.no_match.length}`)
+	console.log(`  Failed: ${results.failed.length}`)
+
+	if (results.no_match.length > 0) {
+		console.log()
+		console.log(
+			`⚠ ${results.no_match.length} tracks had no matches on Soulseek`
+		)
+	}
+
+	if (results.failed.length > 0) {
+		console.log()
+		console.log(`⚠ ${results.failed.length} tracks failed to download`)
+		console.log(`  See: ${folderPath}/failures.jsonl`)
+	}
+
+	// Return unified result format
+	return {
+		total: tracks.length,
+		downloaded: results.complete.length,
+		existing,
+		noMatch: results.no_match.length,
+		failed: results.failed.length,
+		failures: results.failed
+	}
 }
