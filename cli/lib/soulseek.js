@@ -498,10 +498,15 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 			console.error()
 			console.error('Make sure slskd is running:')
 			console.error(
-				'  docker run -d --network host -e SLSKD_SLSK_USERNAME=user -e SLSKD_SLSK_PASSWORD=pass slskd/slskd'
+				'  docker run -d --network host -v /tmp/radio4000/slskd:/app/downloads \\'
+			)
+			console.error(
+				'    -e SLSKD_SLSK_USERNAME=user -e SLSKD_SLSK_PASSWORD=pass slskd/slskd'
 			)
 			console.error()
-			console.error('Or configure in ~/.config/radio4000/config.json')
+			console.error(
+				'Configure slskd credentials in ~/.config/radio4000/config.json'
+			)
 			throw error
 		}
 	}

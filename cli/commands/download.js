@@ -19,10 +19,11 @@ export default {
 			type: 'string',
 			description: 'Output folder path (defaults to config.downloadsDir/<slug>)'
 		},
-		source: {
-			type: 'string',
-			default: 'youtube',
-			description: 'Download source: youtube or soulseek'
+		soulseek: {
+			type: 'boolean',
+			default: false,
+			description:
+				'Download from Soulseek instead of track URLs (requires slskd)'
 		},
 		limit: {
 			type: 'number',
@@ -56,8 +57,7 @@ export default {
 		concurrency: {
 			type: 'number',
 			default: 3,
-			description:
-				'Number of concurrent downloads (youtube: 1-10, soulseek: 1-3)'
+			description: 'Number of concurrent downloads (max 3 for soulseek)'
 		},
 		// Soulseek-specific options
 		'slskd-host': {type: 'string', description: 'slskd host'},
@@ -68,7 +68,8 @@ export default {
 		},
 		'slskd-downloads-dir': {
 			type: 'string',
-			description: 'slskd downloads directory (for Docker)'
+			description:
+				'Host path where slskd saves downloads (default: /tmp/radio4000/slskd)'
 		}
 	},
 
@@ -77,11 +78,6 @@ export default {
 
 		const slug = positionals[0]
 		if (!slug) throw new Error('Missing channel slug')
-
-		const source = values.source
-		if (source !== 'youtube' && source !== 'soulseek') {
-			throw new Error(`Invalid source: ${source}. Use 'youtube' or 'soulseek'`)
-		}
 
 		// Resolve output path from config
 		const config = await loadConfig()
@@ -97,7 +93,7 @@ export default {
 		const tracks = await listTracks({channelSlugs: [slug], limit: values.limit})
 
 		console.log(`${channel.name} (@${channel.slug})`)
-		console.log(`Source: ${source}`)
+		if (values.soulseek) console.log('Source: Soulseek')
 		if (dryRun) console.log(folderPath)
 		console.log()
 
@@ -117,11 +113,10 @@ export default {
 		}
 
 		// Download via source
-		if (source === 'soulseek') {
+		if (values.soulseek) {
 			// Build slskdConfig by merging CLI options with config.soulseek
 			const slskdDownloadsDir =
-				values['slskd-downloads-dir'] ??
-				(config.downloadsDir ? join(config.downloadsDir, 'slskd') : null)
+				values['slskd-downloads-dir'] ?? '/tmp/radio4000/slskd'
 			const slskdConfig = {
 				...config.soulseek,
 				host: values['slskd-host'] ?? config.soulseek.host,
@@ -173,13 +168,13 @@ export default {
 	},
 
 	examples: [
-		'# YouTube (default)',
 		'r4 download ko002',
 		'r4 download ko002 --limit 10 --dry-run',
 		'',
 		'# Soulseek (requires slskd)',
-		'r4 download ko002 --source soulseek',
+		'# docker run -d --network host -v /tmp/radio4000/slskd:/app/downloads slskd/slskd',
+		'r4 download ko002 --soulseek',
 		'',
-		'# Output: ko002/tracks/ (youtube), ko002/soulseek/ (soulseek)'
+		'# Output: ko002/tracks/ (yt-dlp), ko002/soulseek/ (soulseek)'
 	]
 }
