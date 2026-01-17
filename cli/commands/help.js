@@ -1,4 +1,12 @@
-import {listAllCommands} from '../utils.js'
+import {aliases, listAllCommands} from '../utils.js'
+
+/** Get alias for a command name (e.g., 'list' → 'ls') */
+function getAliasFor(cmdName) {
+	for (const [alias, canonical] of Object.entries(aliases)) {
+		if (canonical === cmdName) return alias
+	}
+	return null
+}
 
 export default {
 	description: 'Show help information',
@@ -10,104 +18,87 @@ export default {
 		// Group commands by category (directory structure)
 		const groups = {}
 		for (const cmd of allCommands) {
-			// Determine group from path (e.g., "channel/list" → "channel")
-			const parts = cmd.name.split('/')
+			// Determine group from command name (e.g., "channel list" → "channel")
+			const parts = cmd.name.split(' ')
 			if (parts.length > 1) {
 				const group = parts[0]
 				const subcommand = parts.slice(1).join(' ')
 				if (!groups[group]) groups[group] = []
 				groups[group].push({
-					name: `${group} ${subcommand}`,
+					name: subcommand,
+					fullName: cmd.name,
 					description: cmd.description
 				})
 			} else {
 				// Top-level commands go into "General"
 				if (!groups.General) groups.General = []
-				groups.General.push({name: cmd.name, description: cmd.description})
+				groups.General.push({
+					name: cmd.name,
+					fullName: cmd.name,
+					description: cmd.description
+				})
 			}
 		}
 
 		// Generate COMMANDS section dynamically
 		let commandsSection = ''
 		const groupTitles = {
-			channel: 'Channel Operations',
-			track: 'Track Operations',
-			tags: 'Tag Operations',
-			auth: 'Authentication',
+			channel: 'Channel',
+			track: 'Track',
+			tags: 'Tags',
+			auth: 'Auth',
 			General: 'General'
 		}
 
-		for (const [group, commands] of Object.entries(groups)) {
+		// Order groups: General first, then alphabetically
+		const orderedGroups = [
+			'General',
+			...Object.keys(groups)
+				.filter((g) => g !== 'General')
+				.sort()
+		]
+
+		for (const group of orderedGroups) {
+			const commands = groups[group]
+			if (!commands) continue
+
 			const title =
 				groupTitles[group] ||
-				`${group.charAt(0).toUpperCase() + group.slice(1)} Operations`
+				group.charAt(0).toUpperCase() + group.slice(1)
 			commandsSection += `   ${title}\n`
 			for (const cmd of commands) {
-				const padding = ' '.repeat(Math.max(1, 20 - cmd.name.length))
-				commandsSection += `       ${cmd.name}${padding}${cmd.description}\n`
+				// Check if the subcommand has an alias
+				const alias = getAliasFor(cmd.name)
+				const displayName = alias ? `${cmd.name} (${alias})` : cmd.name
+				const padding = ' '.repeat(Math.max(1, 20 - displayName.length))
+				commandsSection += `       ${displayName}${padding}${cmd.description}\n`
 			}
 			commandsSection += '\n'
 		}
 
 		const help = `
-R4(1)                    Command-line interface                    R4(1)
+r4 - Radio4000 CLI
 
-NAME
-       r4 - Radio4000 command-line interface
+Usage: r4 <command> [options]       (add --help to any command)
 
-SYNOPSIS
-       r4 <command> <subcommand> [<args>] [flags]
-
-TLDR
-       r4 channel list --limit 10      # List channels
-       r4 channel view ko002           # View channel details
-       r4 track list                   # List all tracks
-       r4 track list --channel foo     # List tracks in channel
-       r4 auth                         # Authenticate
-       r4 help                         # Show this help
-       r4 version                      # Show version
+Examples:
+       r4 channel list --limit 10                        # Discover channels
+       r4 channel view ko002                             # View a channel
+       r4 track list --channel ko002                     # List its tracks
+       r4 track list --channel ko002 | jq '.[].title'    # Pipe to jq
+       r4 download ko002 --output ~/Music                # Download tracks
+       r4 channel create myradio --name "My Radio"       # Create your own
+       r4 track create --url "..." --channel myradio     # Add a track
+       r4 channel list --format sql | sqlite3 r4.db      # Export to SQLite
 
 COMMANDS
 ${commandsSection.trimEnd()}
 
 FLAGS
-       --limit <n>     Limit number of results
-       --format <type> Output format: text, json, sql (auto: tty=text, pipe=json)
-       --channel <slug>
-                       Filter tracks by channel slug
+       --limit <n>  --format <text|json|sql|m3u>  --channel <slug>
 
-DATA SOURCES
-       Read operations (list/view) use smart fallback:
-       1. Query v2 API (Supabase)
-       2. Fall back to bundled v1 data (read-only, ~600 channels)
-
-       Write operations (create/update/delete) only work with v2.
-
-AUTHENTICATION
-       Set R4_AUTH_TOKEN environment variable or use 'r4 auth login'
-
-EXAMPLES
-       # List and view
-       r4 channel list --limit 100
-       r4 channel view ko002 oskar
-       r4 track list
-       r4 track list --channel ko002
-
-       # Create and update
-       r4 channel create mysounds --name "My Sounds"
-       r4 track create --url "..." --title "Song" --channel mysounds
-
-       # Export to SQLite
-       r4 schema | sqlite3 channels.db
-       r4 channel list --limit 1000 --format sql | sqlite3 channels.db
-
-       # Pipe and transform
-       r4 track list --channel foo | jq '.[] | .title'
-
-       # Download
-       r4 download ko002 --output ~/Music
-
-SEE ALSO
+MORE
+       Reads from v2 API with v1 fallback. Writes require v2 + auth.
        https://radio4000.com
        https://github.com/radio4000/r4
 `.trim()

@@ -4,6 +4,20 @@ import {dirname, join, resolve} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {parseArgs} from 'node:util'
 
+/** Command aliases: short form → canonical form */
+export const aliases = {
+	ls: 'list'
+}
+
+/**
+ * Resolve command alias to canonical name
+ * @param {string} cmd - Command name (possibly an alias)
+ * @returns {string} Canonical command name
+ */
+function resolveAlias(cmd) {
+	return aliases[cmd] || cmd
+}
+
 /**
  * Route argv to a command file
  * @param {string[]} argv - process.argv.slice(2)
@@ -31,16 +45,18 @@ export async function route(argv) {
 	// Walk directory structure to find command file
 	let currentDir = resolvedDir
 	for (let i = 0; i < commandPath.length; i++) {
-		const segment = commandPath[i]
+		const segment = resolveAlias(commandPath[i])
 		const file = join(currentDir, `${segment}.js`)
 		const dir = join(currentDir, segment)
 
 		// Found a command file?
 		if (existsSync(file)) {
+			// Build canonical command name (resolve aliases for display)
+			const canonicalPath = commandPath.slice(0, i + 1).map(resolveAlias)
 			return {
 				commandFile: file,
 				commandArgv: argv.slice(i + 1), // remaining args
-				commandName: commandPath.slice(0, i + 1).join(' ')
+				commandName: canonicalPath.join(' ')
 			}
 		}
 
