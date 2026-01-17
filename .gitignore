@@ -2,3 +2,4 @@ downloads
 node_modules
 data/channels_v1.json
 data/tracks_v1.json
+.env
