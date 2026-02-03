@@ -4,7 +4,6 @@
  */
 
 import filenamify from 'filenamify'
-import {detectMediaProvider, extractYouTubeId} from './media.js'
 
 /**
  * Create safe filename from track (no path, no extension)
@@ -22,10 +21,9 @@ export function toFilename(track) {
 		maxLength: 180 // Leave room for ID suffix
 	})
 
-	// Add YouTube ID suffix if available (for uniqueness)
-	const ytId = extractYouTubeId(track.url)
-	if (ytId) {
-		return `${cleanTitle} [${ytId}]`
+	// Add media ID suffix if available (for uniqueness)
+	if (track.media_id) {
+		return `${cleanTitle} [${track.media_id}]`
 	}
 
 	return cleanTitle
@@ -42,6 +40,5 @@ export function toExtension(track) {
 		return track.extension
 	}
 
-	const provider = detectMediaProvider(track.url)
-	return provider === 'soundcloud' ? 'mp3' : 'm4a'
+	return track.provider === 'soundcloud' ? 'mp3' : 'm4a'
 }

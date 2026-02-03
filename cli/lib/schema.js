@@ -35,6 +35,8 @@ export const trackSchema = z.preprocess(
 		tags: z.array(z.string()).default([]),
 		duration: z.number().int().nonnegative().nullish(),
 		playback_error: z.string().nullish(),
+		provider: z.string().nullish(),
+		media_id: z.string().nullish(),
 		created_at: z.iso.datetime({offset: true}).optional(),
 		updated_at: z.iso.datetime({offset: true}).optional(),
 		source: z.enum(['v1', 'v2']).default('v2')

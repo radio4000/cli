@@ -6,7 +6,6 @@ import getArtistTitle from 'get-artist-title'
 import {toExtension, toFilename} from './filenames.js'
 import {channelToText, trackToText} from './formatters.js'
 import {createCloudinaryImageUrl} from './images.js'
-import {extractYouTubeId} from './media.js'
 import pLimit from './p-limit-custom.js'
 
 // Helper to format single channel/track (formatters handle arrays by default)
@@ -526,7 +525,7 @@ export async function writeFailures(
 				id: failure.track.id,
 				title: failure.track.title,
 				url: failure.track.url,
-				youtubeId: extractYouTubeId(failure.track.url)
+				media_id: failure.track.media_id
 			},
 			error: failure.error
 		})

@@ -20,7 +20,8 @@ test('writeFailures creates JSONL with correct structure', async () => {
 			track: {
 				id: 'track1',
 				title: 'Artist - Song 1',
-				url: 'https://youtube.com/watch?v=abc123'
+				url: 'https://youtube.com/watch?v=dQw4w9WgXcQ',
+				media_id: 'dQw4w9WgXcQ'
 			},
 			error: 'Video unavailable'
 		}
@@ -33,7 +34,7 @@ test('writeFailures creates JSONL with correct structure', async () => {
 	const parsed = JSON.parse(content.trim())
 
 	assert.equal(parsed.track.id, 'track1')
-	assert.equal(parsed.track.youtubeId, 'abc123')
+	assert.equal(parsed.track.media_id, 'dQw4w9WgXcQ')
 	assert.equal(parsed.error, 'Video unavailable')
 	assert.ok(parsed.timestamp)
 })

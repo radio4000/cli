@@ -63,8 +63,7 @@ export default {
 			if (!commands) continue
 
 			const title =
-				groupTitles[group] ||
-				group.charAt(0).toUpperCase() + group.slice(1)
+				groupTitles[group] || group.charAt(0).toUpperCase() + group.slice(1)
 			commandsSection += `   ${title}\n`
 			for (const cmd of commands) {
 				// Check if the subcommand has an alias
