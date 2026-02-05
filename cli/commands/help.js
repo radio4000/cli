@@ -98,8 +98,7 @@ FLAGS
 
 MORE
        Reads from v2 API with v1 fallback. Writes require v2 + auth.
-       https://radio4000.com
-       https://github.com/radio4000/r4
+       https://radio4000.com - https://github.com/radio4000/cli
 `.trim()
 
 		return help

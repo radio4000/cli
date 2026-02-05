@@ -37,7 +37,7 @@ Most commands support a  `--format` flag to print human-readable text, json or S
 ## Development
 
 ```bash
-git clone git@github.com:radio4000/r4.git
+git clone git@github.com:radio4000/cli.git
 cd r4
 bun install
 bun link # optional for easy local dev

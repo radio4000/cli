@@ -15,7 +15,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/radio4000/r4.git"
+		"url": "git+https://github.com/radio4000/cli.git"
 	},
 	"author": "radio4000",
 	"license": "GPL-3.0-or-later",
