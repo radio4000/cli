@@ -4,6 +4,9 @@
 	"description": "CLI for Radio4000",
 	"type": "module",
 	"main": "cli/main.js",
+	"exports": {
+		".": "./cli/main.js"
+	},
 	"scripts": {
 		"format": "biome format --write",
 		"lint": "biome lint --write",
@@ -26,7 +29,7 @@
 		"zod": "^4.3.6"
 	},
 	"bin": {
-		"r4": "./cli/main.js"
+		"r4": "cli/main.js"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.14"
