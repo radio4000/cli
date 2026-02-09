@@ -4,6 +4,9 @@
 	"description": "CLI for Radio4000",
 	"type": "module",
 	"main": "cli/main.js",
+	"exports": {
+		".": "./cli/main.js"
+	},
 	"scripts": {
 		"format": "biome format --write",
 		"lint": "biome lint --write",
@@ -12,7 +15,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/radio4000/r4.git"
+		"url": "git+https://github.com/radio4000/cli.git"
 	},
 	"author": "radio4000",
 	"license": "GPL-3.0-or-later",
@@ -26,7 +29,7 @@
 		"zod": "^4.3.6"
 	},
 	"bin": {
-		"r4": "./cli/main.js"
+		"r4": "cli/main.js"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.14"
