@@ -1,8 +1,7 @@
 Hey we're making a new CLI in @cli/ - it's malleable, composable, beautiful like lisp, haskell and elixir.
-This is a CLI. Test it, use it with `r4`. Super for debugging. And if it can't debug it, propose changes in @plan.md.
+This is a CLI. Test it, use it with `./cli/main.js`. Super for debugging. And if it can't debug it, propose changes in @plan.md.
 
-Run the cli with `r4`. This works when you `bun link`.
-Remember you can pipe the outputs of each command. It's quite flexible.
+The `r4` binary which may or may not be in path, is not necessarily the same as the local repo. It's the globally installed version of this package. Remember you can pipe the outputs of each command. It's quite flexible.
 
 ## Architecture
 

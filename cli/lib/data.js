@@ -86,9 +86,13 @@ export async function listTracks(options = {}) {
 		)
 	}
 
-	const {data: channels} = await sdk.channels.readChannels()
-	const knownSlugs = new Set(channels?.map((ch) => ch.slug) || [])
-	const missing = channelSlugs.filter((s) => !knownSlugs.has(s))
+	const missing = []
+	await Promise.all(
+		channelSlugs.map(async (slug) => {
+			const {data, error} = await sdk.channels.readChannel(slug)
+			if (error || !data) missing.push(slug)
+		})
+	)
 	if (missing.length) throw channelNotFound(missing)
 
 	const rawTracks = await Promise.all(
