@@ -5,17 +5,16 @@ export const channelSchema = z.object({
 	id: z.string().optional(),
 	slug: z.string().min(1).max(100),
 	name: z.string().min(1).max(200),
-	description: z.string().default(''),
-	url: z.string().default(''),
-	image: z.string().default(''),
+	description: z.string().nullish(),
+	url: z.string().nullish(),
+	image: z.string().nullish(),
 	latitude: z.number().nullish(),
 	longitude: z.number().nullish(),
 	track_count: z.number().int().nonnegative().nullish(),
 	firebase_id: z.string().nullish(),
 	created_at: z.iso.datetime({offset: true}).optional(),
 	updated_at: z.iso.datetime({offset: true}).optional(),
-	latest_track_at: z.iso.datetime({offset: true}).nullish(),
-	source: z.enum(['v1', 'v2']).default('v2')
+	latest_track_at: z.iso.datetime({offset: true}).nullish()
 })
 
 export const trackSchema = z.preprocess(
@@ -38,8 +37,7 @@ export const trackSchema = z.preprocess(
 		provider: z.string().nullish(),
 		media_id: z.string().nullish(),
 		created_at: z.iso.datetime({offset: true}).optional(),
-		updated_at: z.iso.datetime({offset: true}).optional(),
-		source: z.enum(['v1', 'v2']).default('v2')
+		updated_at: z.iso.datetime({offset: true}).optional()
 	})
 )
 
@@ -57,8 +55,7 @@ export const channelSQL = `CREATE TABLE IF NOT EXISTS channels (
   firebase_id TEXT,
   created_at TEXT,
   updated_at TEXT,
-  latest_track_at TEXT,
-  source TEXT
+  latest_track_at TEXT
 );`
 
 export const trackSQL = `CREATE TABLE IF NOT EXISTS tracks (
@@ -72,6 +69,5 @@ export const trackSQL = `CREATE TABLE IF NOT EXISTS tracks (
   discogs_url TEXT,
   tags TEXT,
   created_at TEXT,
-  updated_at TEXT,
-  source TEXT
+  updated_at TEXT
 );`

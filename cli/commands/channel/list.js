@@ -3,7 +3,7 @@ import {channelToSQL, channelToText, toJSON} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
-	description: 'List all channels (from v2 API or bundled v1 data)',
+	description: 'List all channels',
 
 	options: {
 		limit: {

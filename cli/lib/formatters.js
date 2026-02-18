@@ -104,8 +104,7 @@ function formatChannelText(channel) {
 		channel.image && `Image: ${channel.image}`,
 		channel.latitude !== undefined && `Latitude: ${channel.latitude}`,
 		channel.longitude !== undefined && `Longitude: ${channel.longitude}`,
-		channel.track_count !== undefined && `Tracks: ${channel.track_count}`,
-		channel.firebase_id && `Firebase ID: ${channel.firebase_id}`
+		channel.track_count !== undefined && `Tracks: ${channel.track_count}`
 	]
 		.filter(Boolean)
 		.join('\n  ')
@@ -118,7 +117,6 @@ ${channel.description}
 Info:
   ID: ${channel.id || 'N/A'}
   Slug: ${channel.slug}
-  Source: ${channel.source || 'N/A'}
   Created: ${channel.created_at ? new Date(channel.created_at).toLocaleDateString() : 'Unknown'}
   Updated: ${channel.updated_at ? new Date(channel.updated_at).toLocaleDateString() : 'Unknown'}
 ${optional ? `  ${optional}\n` : ''}`
