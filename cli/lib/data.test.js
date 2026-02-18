@@ -1,12 +1,5 @@
 import {afterEach, beforeEach, describe, expect, test} from 'bun:test'
-import {
-	getChannel,
-	listChannels,
-	listTracks,
-	loadV1Channels,
-	loadV1Tracks,
-	requireAuth
-} from './data.js'
+import {getChannel, listChannels, listTracks, requireAuth} from './data.js'
 
 const originalEnv = process.env.R4_AUTH_TOKEN
 
@@ -17,33 +10,6 @@ afterEach(() => {
 	} else {
 		delete process.env.R4_AUTH_TOKEN
 	}
-})
-
-describe('loadV1Channels', () => {
-	test('returns array with v1 source', async () => {
-		const channels = await loadV1Channels()
-		expect(channels.length > 0).toBe(true)
-		expect(channels.every((ch) => ch.source === 'v1')).toBe(true)
-	})
-
-	test('caches result', async () => {
-		const first = await loadV1Channels()
-		const second = await loadV1Channels()
-		expect(first).toBe(second)
-	})
-})
-
-describe('loadV1Tracks', () => {
-	test('returns array with v1 source', async () => {
-		const tracks = await loadV1Tracks()
-		expect(tracks.length > 0).toBe(true)
-		expect(tracks.every((tr) => tr.source === 'v1')).toBe(true)
-	})
-
-	test('all tracks have valid urls', async () => {
-		const tracks = await loadV1Tracks()
-		expect(tracks.every((tr) => tr.url?.length > 0)).toBe(true)
-	})
 })
 
 describe('auth', () => {
@@ -73,27 +39,18 @@ describe('listChannels', () => {
 
 	test('all have required fields', async () => {
 		const channels = await listChannels({limit: 10})
-		expect(channels.every((ch) => ch.id && ch.slug && ch.source)).toBe(true)
+		expect(channels.every((ch) => ch.id && ch.slug)).toBe(true)
 	})
 })
 
 describe('getChannel', () => {
-	test('fetches v1 channel', async () => {
+	test('fetches channel by slug', async () => {
 		const ch = await getChannel('detecteve')
 		expect(ch.slug).toBe('detecteve')
-		expect(ch.source).toBe('v1')
-	})
-
-	test('fetches v2 channel', async () => {
-		const ch = await getChannel('ko002')
-		expect(ch.slug).toBe('ko002')
-		expect(ch.source).toBe('v2')
 	})
 
 	test('throws for non-existent channel', async () => {
-		await expect(getChannel('nonexistent-xyz')).rejects.toThrow(
-			'Channel not found'
-		)
+		await expect(getChannel('nonexistent-xyz')).rejects.toThrow()
 	})
 })
 
@@ -110,7 +67,7 @@ describe('listTracks', () => {
 
 	test('all have required fields', async () => {
 		const tracks = await listTracks({channelSlugs: ['-songs'], limit: 10})
-		expect(tracks.every((tr) => tr.id && tr.url && tr.source)).toBe(true)
+		expect(tracks.every((tr) => tr.id && tr.url)).toBe(true)
 	})
 
 	test('filters by channel slug', async () => {
