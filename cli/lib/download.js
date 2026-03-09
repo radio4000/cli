@@ -77,7 +77,7 @@ export function readFailedTrackIds(folderPath) {
  * Prepare tracks with filesystem metadata
  * Enriches track objects with file paths and existence status
  */
-function prepareTracks(tracks, folderPath) {
+export function prepareTracks(tracks, folderPath) {
 	return tracks.map((track) => ({
 		...track,
 		filename: toFilename(track),
@@ -246,7 +246,8 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 		previouslyFailed: previouslyFailed.length,
 		downloaded: successes.length,
 		failed: failures.length,
-		failures
+		failures,
+		tracks: prepared
 	}
 }
 
@@ -494,6 +495,45 @@ export async function writeTracksPlaylist(
 
 	if (verbose) {
 		console.log('Wrote tracks.m3u:', filepath)
+	}
+
+	return filepath
+}
+
+/**
+ * Write backup.json with local file paths for downloaded tracks
+ * Format matches ChannelBackup: { version, created_at, channel, tracks[] }
+ * Tracks with local files get relative path as url; failed tracks keep original url
+ */
+export async function writeBackupJson(
+	channel,
+	tracks,
+	folderPath,
+	{verbose = false, baseUrl = ''} = {}
+) {
+	const filepath = `${folderPath}/backup.json`
+	const prefix = baseUrl ? `${baseUrl.replace(/\/$/, '')}/tracks` : 'tracks'
+
+	const backupTracks = tracks.map((track) => {
+		if (track.fileExists || existsSync(track.filepath)) {
+			const filename = track.filename || toFilename(track)
+			const extension = toExtension(track)
+			return {...track, url: `${prefix}/${filename}.${extension}`}
+		}
+		return track
+	})
+
+	const backup = {
+		version: 2,
+		created_at: new Date().toISOString(),
+		channel,
+		tracks: backupTracks
+	}
+
+	await writeFile(filepath, JSON.stringify(backup, null, '\t'), 'utf-8')
+
+	if (verbose) {
+		console.log('Wrote backup.json:', filepath)
 	}
 
 	return filepath

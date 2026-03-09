@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict'
 import {mkdir, readFile, rm, writeFile} from 'node:fs/promises'
 import {afterEach, beforeEach, test} from 'node:test'
-import {filterTracks, readFailedTrackIds, writeFailures} from './download.js'
+import {
+	filterTracks,
+	readFailedTrackIds,
+	writeBackupJson,
+	writeFailures
+} from './download.js'
 
 const testDir = '/tmp/r4-test-download'
 
@@ -116,6 +121,107 @@ test('readFailedTrackIds reads track IDs from failures.jsonl', async () => {
 	assert.equal(failedIds.size, 2)
 	assert.ok(failedIds.has('track1'))
 	assert.ok(failedIds.has('track2'))
+})
+
+const channel = {slug: 'ko002', name: 'KO002'}
+
+const makeTrack = (overrides) => ({
+	id: 'abc',
+	title: 'Artist - Song',
+	url: 'https://youtube.com/watch?v=dQw4w9WgXcQ',
+	media_id: 'dQw4w9WgXcQ',
+	provider: 'youtube',
+	...overrides
+})
+
+test('writeBackupJson writes ChannelBackup with local paths for existing files', async () => {
+	await mkdir(`${testDir}/tracks`, {recursive: true})
+
+	const trackFile = `${testDir}/tracks/Artist - Song [dQw4w9WgXcQ].m4a`
+	await writeFile(trackFile, '', 'utf-8')
+
+	const tracks = [
+		makeTrack({
+			filename: 'Artist - Song [dQw4w9WgXcQ]',
+			filepath: trackFile,
+			fileExists: true
+		})
+	]
+
+	await writeBackupJson(channel, tracks, testDir)
+
+	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	assert.equal(backup.version, 2)
+	assert.ok(backup.created_at)
+	assert.deepEqual(backup.channel, channel)
+	assert.equal(backup.tracks[0].url, 'tracks/Artist - Song [dQw4w9WgXcQ].m4a')
+})
+
+test('writeBackupJson keeps remote URL for tracks that failed (no local file)', async () => {
+	const remoteUrl = 'https://youtube.com/watch?v=dQw4w9WgXcQ'
+	const tracks = [
+		makeTrack({
+			filename: 'Artist - Song [dQw4w9WgXcQ]',
+			filepath: `${testDir}/tracks/Artist - Song [dQw4w9WgXcQ].m4a`,
+			fileExists: false,
+			url: remoteUrl
+		})
+	]
+
+	await writeBackupJson(channel, tracks, testDir)
+
+	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	assert.equal(backup.tracks[0].url, remoteUrl)
+})
+
+test('writeBackupJson uses base-url prefix when provided', async () => {
+	await mkdir(`${testDir}/tracks`, {recursive: true})
+
+	const trackFile = `${testDir}/tracks/Artist - Song [dQw4w9WgXcQ].m4a`
+	await writeFile(trackFile, '', 'utf-8')
+
+	const tracks = [
+		makeTrack({
+			filename: 'Artist - Song [dQw4w9WgXcQ]',
+			filepath: trackFile,
+			fileExists: true
+		})
+	]
+
+	await writeBackupJson(channel, tracks, testDir, {
+		baseUrl: 'https://cdn.example.com'
+	})
+
+	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	assert.equal(
+		backup.tracks[0].url,
+		'https://cdn.example.com/tracks/Artist - Song [dQw4w9WgXcQ].m4a'
+	)
+})
+
+test('writeBackupJson strips trailing slash from base-url', async () => {
+	await mkdir(`${testDir}/tracks`, {recursive: true})
+
+	const trackFile = `${testDir}/tracks/Artist - Song [dQw4w9WgXcQ].m4a`
+	await writeFile(trackFile, '', 'utf-8')
+
+	const tracks = [
+		makeTrack({
+			filename: 'Artist - Song [dQw4w9WgXcQ]',
+			filepath: trackFile,
+			fileExists: true
+		})
+	]
+
+	await writeBackupJson(channel, tracks, testDir, {
+		baseUrl: 'https://cdn.example.com/'
+	})
+
+	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	assert.equal(
+		backup.tracks[0].url,
+		'https://cdn.example.com/tracks/Artist - Song [dQw4w9WgXcQ].m4a'
+	)
 })
 
 test('filterTracks excludes previously failed tracks by default', async () => {

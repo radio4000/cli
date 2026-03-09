@@ -15,7 +15,9 @@ r4 channel list --limit 10
 r4 channel view ko002
 r4 track list --channel ko002
 r4 track list --channel ko002 --tag jazz,ambient
-r4 download ko002
+r4 download ko002                                     # downloads to ./ko002/
+r4 download ko002 --base-url https://cdn.example.com  # absolute URLs in backup.json
+r4 download ko002 --backup-file                       # only write backup.json, no download
 r4 search "ambient"
 r4 auth login
 r4 channel create radio123 --name "Radio 123"
@@ -33,6 +35,8 @@ r4 track list --channel ko002 --format sql | sqlite3 my.db
 Most commands support a  `--format` flag to print human-readable text, json or SQL.
 
 > For the `r4 download` command to work, make sure [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) is installed.
+
+After downloading, a `backup.json` is written alongside the tracks — a self-contained `ChannelBackup` (`{ version, created_at, channel, tracks[] }`) where each track's `url` points to its local file at `tracks/<filename>.<ext>`. Tracks that failed to download keep their original remote URL. Use `--base-url` to produce absolute URLs (e.g. when serving the folder over HTTP). Use `--no-metadata` to skip writing `backup.json`.
 
 ## Development
 
