@@ -1,4 +1,6 @@
-import {resolve} from 'node:path'
+import {mkdir} from 'node:fs/promises'
+import {join, resolve} from 'node:path'
+import {load as loadConfig} from '../lib/config.js'
 import {getChannel, listTracks} from '../lib/data.js'
 import {
 	downloadChannel,
@@ -6,6 +8,7 @@ import {
 	writeChannelImageUrl,
 	writeTracksPlaylist
 } from '../lib/download.js'
+import {downloadChannel as downloadChannelSoulseek} from '../lib/soulseek.js'
 import {parse} from '../utils.js'
 
 export default {
@@ -14,7 +17,13 @@ export default {
 	options: {
 		output: {
 			type: 'string',
-			description: 'Output folder path (defaults to ./<slug>)'
+			description: 'Output folder path (defaults to config.downloadsDir/<slug>)'
+		},
+		soulseek: {
+			type: 'boolean',
+			default: false,
+			description:
+				'Download from Soulseek instead of track URLs (requires slskd)'
 		},
 		limit: {
 			type: 'number',
@@ -48,7 +57,19 @@ export default {
 		concurrency: {
 			type: 'number',
 			default: 3,
-			description: 'Number of concurrent downloads'
+			description: 'Number of concurrent downloads (max 3 for soulseek)'
+		},
+		// Soulseek-specific options
+		'slskd-host': {type: 'string', description: 'slskd host'},
+		'slskd-port': {type: 'number', description: 'slskd port'},
+		'min-bitrate': {
+			type: 'number',
+			description: 'Minimum bitrate for lossy formats (default: 320)'
+		},
+		'slskd-downloads-dir': {
+			type: 'string',
+			description:
+				'Temp folder where slskd saves files before moving to channel (default: /tmp/radio4000/slskd)'
 		}
 	},
 
@@ -56,11 +77,13 @@ export default {
 		const {values, positionals} = parse(argv, this.options)
 
 		const slug = positionals[0]
-		if (!slug) {
-			throw new Error('Missing channel slug')
-		}
+		if (!slug) throw new Error('Missing channel slug')
 
-		const folderPath = resolve(values.output || `./${slug}`)
+		// Resolve output path from config
+		const config = await loadConfig()
+		const baseDir = values.output || config.downloadsDir || '.'
+		const folderPath = resolve(join(baseDir, slug))
+
 		const dryRun = values['dry-run']
 		const verbose = values.verbose
 		const noMetadata = values['no-metadata']
@@ -70,27 +93,49 @@ export default {
 		const tracks = await listTracks({channelSlugs: [slug], limit: values.limit})
 
 		console.log(`${channel.name} (@${channel.slug})`)
-		if (dryRun) {
-			console.log(folderPath)
-		}
+		if (values.soulseek) console.log('Source: Soulseek')
+		if (dryRun) console.log(folderPath)
 		console.log()
 
-		// Write channel context files (unless dry run)
+		// Write metadata files
 		if (!dryRun) {
-			const {mkdir} = await import('node:fs/promises')
 			await mkdir(folderPath, {recursive: true})
-
-			console.log(`${folderPath}/`)
-			await writeChannelAbout(channel, tracks, folderPath, {verbose})
-			console.log(`├── ${channel.slug}.txt`)
-			await writeChannelImageUrl(channel, folderPath, {verbose})
-			console.log('├── image.url')
-			await writeTracksPlaylist(tracks, folderPath, {verbose})
-			console.log(`└── tracks.m3u (try: mpv ${folderPath}/tracks.m3u)`)
-			console.log()
+			if (!noMetadata) {
+				console.log(`${folderPath}/`)
+				await writeChannelAbout(channel, tracks, folderPath, {verbose})
+				console.log(`├── ${channel.slug}.txt`)
+				await writeChannelImageUrl(channel, folderPath, {verbose})
+				console.log('├── image.url')
+				await writeTracksPlaylist(tracks, folderPath, {verbose})
+				console.log(`└── tracks.m3u (try: mpv ${folderPath}/tracks.m3u)`)
+				console.log()
+			}
 		}
 
-		// Download
+		// Download via source
+		if (values.soulseek) {
+			// Build slskdConfig by merging CLI options with config.soulseek
+			const slskdDownloadsDir =
+				values['slskd-downloads-dir'] ?? '/tmp/radio4000/slskd'
+			const slskdConfig = {
+				...config.soulseek,
+				host: values['slskd-host'] ?? config.soulseek.host,
+				port: values['slskd-port'] ?? config.soulseek.port,
+				downloadsDir: slskdDownloadsDir
+			}
+			await downloadChannelSoulseek(tracks, folderPath, {
+				dryRun,
+				verbose,
+				force: values.force,
+				retryFailed: values['retry-failed'],
+				concurrency: Math.min(values.concurrency, 3),
+				minBitrate: values['min-bitrate'],
+				slskdConfig
+			})
+			return ''
+		}
+
+		// Default: yt-dlp (supports YouTube, SoundCloud, Bandcamp, etc.)
 		const result = await downloadChannel(tracks, folderPath, {
 			force: values.force,
 			retryFailed: values['retry-failed'],
@@ -100,7 +145,6 @@ export default {
 			concurrency: values.concurrency
 		})
 
-		// Only show summary and failures for actual downloads, not dry runs
 		if (!dryRun) {
 			console.log()
 			console.log('Summary:')
@@ -120,19 +164,17 @@ export default {
 			}
 		}
 
-		// Don't return data - all output already printed above
 		return ''
 	},
 
 	examples: [
 		'r4 download ko002',
-		'r4 download ko002 --limit 10',
-		'r4 download ko002 --output ./my-music',
-		'r4 download ko002 --dry-run',
-		'r4 download ko002 --force',
-		'r4 download ko002 --retry-failed',
-		'r4 download ko002 --no-metadata',
-		'r4 download ko002 --concurrency 5',
-		'mpv ko002/tracks.m3u'
+		'r4 download ko002 --limit 10 --dry-run',
+		'',
+		'# Soulseek (requires slskd)',
+		'# docker run -d --network host -v /tmp/radio4000/slskd:/app/downloads slskd/slskd',
+		'r4 download ko002 --soulseek',
+		'',
+		'# Output: ko002/tracks/ (yt-dlp), ko002/soulseek/ (soulseek)'
 	]
 }

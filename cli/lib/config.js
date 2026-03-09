@@ -5,20 +5,33 @@ import {join} from 'node:path'
 const configPath = join(homedir(), '.config', 'radio4000', 'config.json')
 
 const defaults = {
-	auth: {session: null}
+	auth: {session: null},
+	// Base directory for all downloads (channels saved as subfolders)
+	downloadsDir: null,
+	// slskd connection settings (optional, defaults work for local Docker)
+	soulseek: {
+		host: 'localhost',
+		port: 5030,
+		username: 'slskd',
+		password: 'slskd'
+	}
 }
 
-/** Load config from disk, return defaults if missing */
+/** Load config from disk, deep-merged with defaults */
 export async function load() {
 	try {
 		const data = await readFile(configPath, 'utf-8')
-		return {...defaults, ...JSON.parse(data)}
+		const userConfig = JSON.parse(data)
+		// Deep merge so nested defaults (like soulseek.host) are preserved
+		return {
+			...defaults,
+			...userConfig,
+			soulseek: {...defaults.soulseek, ...userConfig.soulseek}
+		}
 	} catch (error) {
-		// File doesn't exist yet - return defaults
 		if (error.code === 'ENOENT') {
 			return defaults
 		}
-		// File exists but we can't read/parse it - that's a real error
 		throw new Error(
 			`Failed to load config from ${configPath}: ${error.message}`
 		)
@@ -32,13 +45,16 @@ export async function save(config) {
 	return config
 }
 
-/** Update config with partial changes (deep merges auth) */
+/** Update config with partial changes (deep merges auth and soulseek) */
 export async function update(changes) {
 	const config = await load()
 	const merged = {
 		...config,
 		...changes,
-		auth: changes.auth ? {...config.auth, ...changes.auth} : config.auth
+		auth: changes.auth ? {...config.auth, ...changes.auth} : config.auth,
+		soulseek: changes.soulseek
+			? {...config.soulseek, ...changes.soulseek}
+			: config.soulseek
 	}
 	return save(merged)
 }
