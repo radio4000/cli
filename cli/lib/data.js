@@ -75,6 +75,12 @@ export async function deleteChannel(slug) {
 	return data
 }
 
+export async function createChannelBackup(slug) {
+	const {data, error} = await sdk.channels.createChannelBackup(slug)
+	if (error) throw error
+	return data
+}
+
 // ===== TRACK OPERATIONS =====
 
 export async function listTracks(options = {}) {
