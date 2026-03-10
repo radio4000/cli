@@ -511,16 +511,24 @@ export async function writeBackupJson(
 	folderPath,
 	{verbose = false, baseUrl = ''} = {}
 ) {
-	const filepath = `${folderPath}/backup.json`
+	const filepath = `${folderPath}/download.json`
 	const prefix = baseUrl ? `${baseUrl.replace(/\/$/, '')}/tracks` : 'tracks'
 
 	const backupTracks = tracks.map((track) => {
-		if (track.fileExists || existsSync(track.filepath)) {
-			const filename = track.filename || toFilename(track)
-			const extension = toExtension(track)
-			return {...track, url: `${prefix}/${filename}.${extension}`}
+		// Strip internal enrichment fields before writing
+		const {filename, filepath, fileExists, ...cleanTrack} = track
+
+		if (fileExists || existsSync(filepath)) {
+			const ext = toExtension(track)
+			const name = filename || toFilename(track)
+			return {
+				...cleanTrack,
+				url: `${prefix}/${encodeURIComponent(`${name}.${ext}`)}`,
+				provider: 'file',
+				media_id: null
+			}
 		}
-		return track
+		return cleanTrack
 	})
 
 	const backup = {
@@ -533,7 +541,7 @@ export async function writeBackupJson(
 	await writeFile(filepath, JSON.stringify(backup, null, '\t'), 'utf-8')
 
 	if (verbose) {
-		console.log('Wrote backup.json:', filepath)
+		console.log('Wrote download.json:', filepath)
 	}
 
 	return filepath

@@ -97,7 +97,7 @@ export default {
 				baseUrl: values['base-url']
 			})
 			console.log(`${folderPath}/`)
-			console.log('└── backup.json')
+			console.log('└── download.json')
 			return ''
 		}
 
@@ -116,7 +116,7 @@ export default {
 				console.log(`└── tracks.m3u (try: mpv ${folderPath}/tracks.m3u)`)
 			} else {
 				console.log(`├── tracks.m3u (try: mpv ${folderPath}/tracks.m3u)`)
-				console.log('└── backup.json')
+				console.log('└── download.json')
 			}
 			console.log()
 		}

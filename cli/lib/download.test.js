@@ -150,11 +150,14 @@ test('writeBackupJson writes ChannelBackup with local paths for existing files',
 
 	await writeBackupJson(channel, tracks, testDir)
 
-	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	const backup = JSON.parse(await readFile(`${testDir}/download.json`, 'utf-8'))
 	assert.equal(backup.version, 2)
 	assert.ok(backup.created_at)
 	assert.deepEqual(backup.channel, channel)
-	assert.equal(backup.tracks[0].url, 'tracks/Artist - Song [dQw4w9WgXcQ].m4a')
+	assert.equal(
+		backup.tracks[0].url,
+		'tracks/Artist%20-%20Song%20%5BdQw4w9WgXcQ%5D.m4a'
+	)
 })
 
 test('writeBackupJson keeps remote URL for tracks that failed (no local file)', async () => {
@@ -170,7 +173,7 @@ test('writeBackupJson keeps remote URL for tracks that failed (no local file)', 
 
 	await writeBackupJson(channel, tracks, testDir)
 
-	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	const backup = JSON.parse(await readFile(`${testDir}/download.json`, 'utf-8'))
 	assert.equal(backup.tracks[0].url, remoteUrl)
 })
 
@@ -192,10 +195,10 @@ test('writeBackupJson uses base-url prefix when provided', async () => {
 		baseUrl: 'https://cdn.example.com'
 	})
 
-	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	const backup = JSON.parse(await readFile(`${testDir}/download.json`, 'utf-8'))
 	assert.equal(
 		backup.tracks[0].url,
-		'https://cdn.example.com/tracks/Artist - Song [dQw4w9WgXcQ].m4a'
+		'https://cdn.example.com/tracks/Artist%20-%20Song%20%5BdQw4w9WgXcQ%5D.m4a'
 	)
 })
 
@@ -217,10 +220,10 @@ test('writeBackupJson strips trailing slash from base-url', async () => {
 		baseUrl: 'https://cdn.example.com/'
 	})
 
-	const backup = JSON.parse(await readFile(`${testDir}/backup.json`, 'utf-8'))
+	const backup = JSON.parse(await readFile(`${testDir}/download.json`, 'utf-8'))
 	assert.equal(
 		backup.tracks[0].url,
-		'https://cdn.example.com/tracks/Artist - Song [dQw4w9WgXcQ].m4a'
+		'https://cdn.example.com/tracks/Artist%20-%20Song%20%5BdQw4w9WgXcQ%5D.m4a'
 	)
 })
 
