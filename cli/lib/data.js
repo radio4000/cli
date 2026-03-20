@@ -152,19 +152,23 @@ export async function deleteTrack(id) {
 
 /** @param {string} query */
 export async function searchChannels(query, options = {}) {
+	const tag = query.startsWith('#') ? query.slice(1) : null
+	// Channels don't have tags, so tag queries search fts with the tag name stripped of #
 	const {data, error} = await sdk.supabase
 		.from('channels')
 		.select()
-		.textSearch('fts', `'${query}':*`)
+		.textSearch('fts', `'${tag || query}':*`)
 	if (error) throw new Error(error.message)
 	return takeMaybe(options.limit)(data.map((ch) => channelSchema.parse(ch)))
 }
 
 export async function searchTracks(query, options = {}) {
-	const {data, error} = await sdk.supabase
-		.from('channel_tracks')
-		.select()
-		.textSearch('fts', `'${query}':*`)
+	const tag = query.startsWith('#') ? query.slice(1) : null
+	let request = sdk.supabase.from('channel_tracks').select()
+	request = tag
+		? request.contains('tags', [tag])
+		: request.textSearch('fts', `'${query}':*`)
+	const {data, error} = await request
 	if (error) throw new Error(error.message)
 	return takeMaybe(options.limit)(data.map((t) => trackSchema.parse(t)))
 }
