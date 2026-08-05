@@ -1,4 +1,5 @@
 import {createTrack} from '../../lib/data.js'
+import {toJSON} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
@@ -32,11 +33,12 @@ export default {
 			throw new Error('--url is required')
 		}
 
-		return await createTrack({
+		const track = await createTrack({
 			slug: values.channel,
 			title: values.title,
 			url: values.url
 		})
+		return toJSON(track)
 	},
 
 	examples: [

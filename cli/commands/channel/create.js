@@ -1,4 +1,5 @@
 import {createChannel} from '../../lib/data.js'
+import {toJSON} from '../../lib/formatters.js'
 import {parse} from '../../utils.js'
 
 export default {
@@ -28,11 +29,12 @@ export default {
 		}
 
 		const slug = positionals[0]
-		return await createChannel({
+		const channel = await createChannel({
 			slug,
 			name: values.name,
 			description: values.description
 		})
+		return toJSON(channel)
 	},
 
 	examples: [

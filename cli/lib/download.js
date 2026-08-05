@@ -31,7 +31,7 @@ const formatTrackText = (tr) => trackToText(tr)
  */
 
 // Re-export filename utilities for backwards compatibility
-export {toFilename, toExtension}
+export {toExtension, toFilename}
 
 // ============================================================================
 // Pipeline: Prepare → Filter → Download → Report

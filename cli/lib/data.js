@@ -129,7 +129,9 @@ export async function createTrack(data) {
 
 	const {data: track, error} = await sdk.tracks.createTrack(channelId, data)
 	if (error) throw error
-	return trackSchema.parse(track)
+
+	// Fetch the created track since createTrack returns from tracks table, not channel_tracks view
+	return await getTrack(track.id)
 }
 
 export async function updateTrack(id, updates) {

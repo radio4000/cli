@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test'
 import {mkdtemp, readFile, rm} from 'node:fs/promises'
-import {join} from 'node:path'
 import {tmpdir} from 'node:os'
+import {join} from 'node:path'
 
 describe('channel backup command', () => {
 	test('returns a valid backup JSON', async () => {
