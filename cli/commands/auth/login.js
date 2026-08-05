@@ -29,7 +29,7 @@ export default {
 				email = email.trim()
 			}
 
-			if (!email || !email.includes('@')) {
+			if (!email?.includes('@')) {
 				console.error('Invalid email address')
 				return JSON.stringify({success: false})
 			}
