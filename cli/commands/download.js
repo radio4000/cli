@@ -71,6 +71,17 @@ export default {
 			description:
 				'Base URL for track paths in backup.json (e.g. https://cdn.example.com)'
 		},
+		'cookies-from-browser': {
+			type: 'string',
+			description:
+				'Log in to YouTube with cookies from a browser (e.g. chrome, firefox). With Premium you get 256kbps'
+		},
+		upgrade: {
+			type: 'boolean',
+			default: false,
+			description:
+				'Replace existing ~128kbps tracks with 256kbps where YouTube has it. Needs --cookies-from-browser and Premium'
+		},
 		'backup-file': {
 			type: 'boolean',
 			default: false,
@@ -93,6 +104,15 @@ export default {
 		const noMetadata = values['no-metadata']
 		const backupFile = values['backup-file']
 		const markBroken = values['mark-broken']
+
+		if (values.upgrade && !dryRun && !values['cookies-from-browser']) {
+			throw new Error(
+				'--upgrade needs --cookies-from-browser, 256kbps is only for YouTube Premium'
+			)
+		}
+		if (values.upgrade && values.force) {
+			throw new Error('Use either --upgrade or --force, not both')
+		}
 
 		// Get channel and tracks
 		const channel = await getChannel(slug)
@@ -155,7 +175,9 @@ export default {
 			dryRun,
 			verbose,
 			writeMetadata: !noMetadata,
-			concurrency: values.concurrency
+			concurrency: values.concurrency,
+			cookiesFromBrowser: values['cookies-from-browser'],
+			upgrade: values.upgrade
 		})
 
 		// Write backup.json with local paths (unless dry run or no-metadata)
@@ -178,6 +200,19 @@ export default {
 				console.log(`  Previously failed (skipped): ${result.previouslyFailed}`)
 			}
 			console.log(`  Failed: ${result.failed}`)
+			const u = result.upgrade
+			if (u?.checked) {
+				console.log(`  Upgrade checked: ${u.checked}`)
+				console.log(`    Upgraded: ${u.upgraded}`)
+				console.log(`    Already 256kbps: ${u.best}`)
+				console.log(`    No better format: ${u.noBetter}`)
+				if (u.unknown)
+					console.log(`    Unknown bitrate (skipped): ${u.unknown}`)
+				if (u.failed) console.log(`    Upgrade failed: ${u.failed}`)
+				if (u.missingPoToken) {
+					console.log('    Stopped: no PO token, see warning above')
+				}
+			}
 
 			if (result.failures.length > 0) {
 				console.log()
@@ -229,6 +264,8 @@ export default {
 		'r4 download ko002 --mark-broken --dry-run --verbose',
 		'r4 download ko002 --no-metadata',
 		'r4 download ko002 --concurrency 5',
+		'r4 download ko002 --cookies-from-browser chrome',
+		'r4 download ko002 --cookies-from-browser chrome --upgrade',
 		'r4 download ko002 --backup-file',
 		'r4 download ko002 --backup-file --base-url https://cdn.example.com',
 		'mpv ko002/tracks.m3u'
