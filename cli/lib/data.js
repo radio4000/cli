@@ -1,5 +1,6 @@
 import {sdk} from '@radio4000/sdk'
 import * as config from './config.js'
+import pLimit from './p-limit-custom.js'
 import {channelSchema, trackSchema} from './schema.js'
 
 // ===== HELPERS =====
@@ -142,6 +143,20 @@ export async function updateTrack(id, updates) {
 
 	// Fetch the updated track since updateTrack doesn't return the full object
 	return await getTrack(id)
+}
+
+// Authenticates once and skips the re-fetch, so it stays fast for hundreds of tracks
+export async function setPlaybackErrors(updates) {
+	await requireAuth()
+	const limit = pLimit(5)
+	await Promise.all(
+		updates.map(({id, playback_error}) =>
+			limit(async () => {
+				const {error} = await sdk.tracks.updateTrack(id, {playback_error})
+				if (error) throw error
+			})
+		)
+	)
 }
 
 export async function deleteTrack(id) {

@@ -1,8 +1,16 @@
 import {resolve} from 'node:path'
-import {getChannel, listTracks} from '../lib/data.js'
+import {sdk} from '@radio4000/sdk'
+import {
+	getChannel,
+	listTracks,
+	requireAuth,
+	setPlaybackErrors
+} from '../lib/data.js'
 import {
 	downloadChannel,
+	findBrokenTracks,
 	prepareTracks,
+	readFailures,
 	writeBackupJson,
 	writeChannelAbout,
 	writeChannelImageUrl,
@@ -31,6 +39,12 @@ export default {
 			type: 'boolean',
 			default: false,
 			description: 'Retry previously failed downloads'
+		},
+		'mark-broken': {
+			type: 'boolean',
+			default: false,
+			description:
+				'Mark tracks whose video is gone (deleted, private, taken down) as broken, so they show up in doctor. Your own channels only'
 		},
 		'dry-run': {
 			type: 'boolean',
@@ -78,10 +92,23 @@ export default {
 		const verbose = values.verbose
 		const noMetadata = values['no-metadata']
 		const backupFile = values['backup-file']
+		const markBroken = values['mark-broken']
 
 		// Get channel and tracks
 		const channel = await getChannel(slug)
 		const tracks = await listTracks({channelSlugs: [slug], limit: values.limit})
+
+		// Check ownership before a long download, not after
+		if (markBroken && !dryRun) {
+			await requireAuth()
+			const {data: owned, error} = await sdk.channels.readUserChannels()
+			if (error) throw error
+			if (!owned.some((ch) => ch.id === channel.id)) {
+				throw new Error(
+					`--mark-broken only works on your own channels, and @${slug} isn't yours`
+				)
+			}
+		}
 
 		console.log(`${channel.name} (@${channel.slug})`)
 		if (dryRun) {
@@ -159,6 +186,34 @@ export default {
 			}
 		}
 
+		// Reads the whole failures file, so earlier runs count too
+		if (markBroken) {
+			const broken = findBrokenTracks(
+				prepareTracks(tracks, folderPath),
+				readFailures(folderPath)
+			)
+			console.log()
+			if (dryRun) {
+				console.log(`Would mark broken: ${broken.length}`)
+			} else {
+				await setPlaybackErrors(
+					broken.map(({track, playback_error}) => ({
+						id: track.id,
+						playback_error
+					}))
+				)
+				console.log(`Marked broken: ${broken.length}`)
+				if (broken.length > 0) {
+					console.log(`  Fix them: https://radio4000.com/${slug}/doctor`)
+				}
+			}
+			if (verbose) {
+				for (const {track, playback_error} of broken) {
+					console.log(`  ${playback_error}  ${track.title}`)
+				}
+			}
+		}
+
 		// Don't return data - all output already printed above
 		return ''
 	},
@@ -170,6 +225,8 @@ export default {
 		'r4 download ko002 --dry-run',
 		'r4 download ko002 --force',
 		'r4 download ko002 --retry-failed',
+		'r4 download ko002 --mark-broken',
+		'r4 download ko002 --mark-broken --dry-run --verbose',
 		'r4 download ko002 --no-metadata',
 		'r4 download ko002 --concurrency 5',
 		'r4 download ko002 --backup-file',

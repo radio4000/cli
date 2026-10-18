@@ -2,7 +2,9 @@ import assert from 'node:assert/strict'
 import {mkdir, readFile, rm, writeFile} from 'node:fs/promises'
 import {afterEach, beforeEach, test} from 'node:test'
 import {
+	classifyFailure,
 	filterTracks,
+	findBrokenTracks,
 	readFailedTrackIds,
 	writeBackupJson,
 	writeFailures
@@ -86,7 +88,7 @@ test('writeFailures returns null for empty array', async () => {
 })
 
 test('readFailedTrackIds returns empty Set when no file exists', async () => {
-	const failedIds = readFailedTrackIds(testDir)
+	const failedIds = readFailedTrackIds(testDir, [])
 	assert.ok(failedIds instanceof Set)
 	assert.equal(failedIds.size, 0)
 })
@@ -117,10 +119,26 @@ test('readFailedTrackIds reads track IDs from failures.jsonl', async () => {
 
 	await writeFile(`${testDir}/failures.jsonl`, content, 'utf-8')
 
-	const failedIds = readFailedTrackIds(testDir)
+	const failedIds = readFailedTrackIds(testDir, [
+		{id: 'track1', url: 'https://youtube.com/watch?v=a'},
+		{id: 'track2', url: 'https://youtube.com/watch?v=b'}
+	])
 	assert.equal(failedIds.size, 2)
 	assert.ok(failedIds.has('track1'))
 	assert.ok(failedIds.has('track2'))
+})
+
+test('readFailedTrackIds ignores failures for a URL the track no longer has', async () => {
+	const failure = {
+		track: {id: 'track1', url: 'https://youtube.com/watch?v=old'},
+		error: 'Error'
+	}
+	await writeFile(`${testDir}/failures.jsonl`, JSON.stringify(failure), 'utf-8')
+
+	const failedIds = readFailedTrackIds(testDir, [
+		{id: 'track1', url: 'https://youtube.com/watch?v=new'}
+	])
+	assert.equal(failedIds.size, 0)
 })
 
 const channel = {slug: 'ko002', name: 'KO002'}
@@ -261,4 +279,93 @@ test('filterTracks includes failed tracks when force=true', async () => {
 	assert.equal(result.toDownload.length, 2)
 	assert.ok(result.toDownload.some((t) => t.id === 'track1'))
 	assert.ok(result.toDownload.some((t) => t.id === 'track2'))
+})
+
+test('classifyFailure sorts yt-dlp errors by whether the video is gone', () => {
+	const cases = [
+		['ERROR: [youtube] abc: Video unavailable', 'unavailable'],
+		[
+			'ERROR: [youtube] abc: Video unavailable. This video is no longer available because the YouTube account associated with this video has been terminated.',
+			'unavailable'
+		],
+		[
+			'ERROR: [youtube] abc: Video unavailable. It was removed following a copyright removal request by Someone',
+			'unavailable'
+		],
+		[
+			"ERROR: [youtube] abc: This video has been removed for violating YouTube's Terms of Service",
+			'unavailable'
+		],
+		['ERROR: [youtube] abc: Private video', 'private'],
+		[
+			'ERROR: [youtube] abc: Video unavailable. This video contains content from SME, who has blocked it in your country on copyright grounds',
+			'region'
+		],
+		[
+			'ERROR: [youtube] abc: Video unavailable. This content isn’t available, try again later.',
+			'transient'
+		],
+		['ERROR: [youtube] abc: Sign in to confirm you’re not a bot.', 'transient'],
+		['ERROR: [youtube] abc: The page needs to be reloaded.', 'transient'],
+		['ERROR: unable to download video data: HTTP Error 403', 'transient'],
+		[undefined, 'transient']
+	]
+	for (const [error, reason] of cases) {
+		assert.equal(classifyFailure(error), reason, error)
+	}
+})
+
+test('findBrokenTracks marks only tracks whose latest failure is permanent', () => {
+	const url = (id) => `https://www.youtube.com/watch?v=${id}`
+	const tracks = [
+		{id: 'gone', url: url('a')},
+		{id: 'private', url: url('b')},
+		{id: 'flaky', url: url('c')},
+		{id: 'recovered', url: url('d')},
+		{id: 'replaced', url: url('new')},
+		{id: 'flagged', url: url('f'), playback_error: 'youtube:150'},
+		{id: 'downloaded', url: url('g'), fileExists: true},
+		{id: 'never-failed', url: url('h')}
+	]
+	const fail = (id, trackUrl, error) => ({track: {id, url: trackUrl}, error})
+	const failures = [
+		fail('gone', url('a'), 'ERROR: Video unavailable'),
+		fail('private', url('b'), 'ERROR: Private video'),
+		fail('flaky', url('c'), 'ERROR: Sign in to confirm you’re not a bot'),
+		fail('recovered', url('d'), 'ERROR: Video unavailable'),
+		fail('recovered', url('d'), 'ERROR: The page needs to be reloaded.'),
+		fail('replaced', url('old'), 'ERROR: Video unavailable'),
+		fail('flagged', url('f'), 'ERROR: Video unavailable'),
+		fail('downloaded', url('g'), 'ERROR: Video unavailable')
+	]
+
+	const broken = findBrokenTracks(tracks, failures)
+
+	assert.deepEqual(
+		broken.map(({track, playback_error}) => [track.id, playback_error]),
+		[
+			['gone', 'ytdlp:unavailable'],
+			['private', 'ytdlp:private']
+		]
+	)
+})
+
+test('filterTracks skips tracks marked broken by --mark-broken, not other playback errors', () => {
+	const tracks = [
+		{id: 'gone', playback_error: 'ytdlp:unavailable'},
+		{id: 'embed-off', playback_error: 'youtube:150'},
+		{id: 'fine'}
+	]
+
+	const result = filterTracks(tracks, {failedIds: new Set(['gone'])})
+
+	assert.deepEqual(
+		result.unavailable.map((t) => t.id),
+		['gone']
+	)
+	assert.equal(result.previouslyFailed.length, 0)
+	assert.deepEqual(
+		result.toDownload.map((t) => t.id),
+		['embed-off', 'fine']
+	)
 })

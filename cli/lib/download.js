@@ -24,8 +24,11 @@ const formatTrackText = (tr) => trackToText(tr)
  * - toFilename() - Re-exported from filenames.js (used by tags)
  * - toExtension() - Re-exported from filenames.js (used by tags)
  *
- * INTERNAL (3 functions - exported for testing, marked with @internal):
+ * INTERNAL (exported for testing, marked with @internal):
+ * - readFailures() - Read every entry from failures.jsonl
  * - readFailedTrackIds() - Read previously failed track IDs
+ * - classifyFailure() - Sort a yt-dlp error into why it failed
+ * - findBrokenTracks() - Pick tracks whose download failed for good
  * - filterTracks() - Categorize tracks for download pipeline
  * - writeFailures() - Append failures to JSONL file
  */
@@ -38,39 +41,93 @@ export {toExtension, toFilename}
 // ============================================================================
 
 /**
- * Read failed track IDs from failures.jsonl
- * Returns a Set of track IDs that previously failed to download
+ * Read every entry from failures.jsonl, oldest first
+ * Skips lines that aren't valid JSON
  * @internal - exported for testing only
  */
-export function readFailedTrackIds(folderPath) {
+export function readFailures(folderPath) {
 	const filepath = `${folderPath}/failures.jsonl`
 
 	if (!existsSync(filepath)) {
-		return new Set()
+		return []
 	}
 
 	try {
 		const content = readFileSync(filepath, 'utf-8').trim()
 		if (!content) {
-			return new Set()
+			return []
 		}
 
-		const lines = content.split('\n')
-		const ids = lines
+		return content
+			.split('\n')
 			.map((line) => {
 				try {
-					const failure = JSON.parse(line)
-					return failure.track?.id
+					return JSON.parse(line)
 				} catch {
 					return null
 				}
 			})
-			.filter(Boolean)
-
-		return new Set(ids)
+			.filter((failure) => failure?.track?.id)
 	} catch {
-		return new Set()
+		return []
 	}
+}
+
+/**
+ * Read IDs of tracks whose current URL failed to download before
+ * A replaced URL (e.g. fixed in doctor) counts as new, so it downloads again
+ * @internal - exported for testing only
+ */
+export function readFailedTrackIds(folderPath, tracks) {
+	const urls = new Map(tracks.map((track) => [track.id, track.url]))
+	return new Set(
+		readFailures(folderPath)
+			.filter((failure) => urls.get(failure.track.id) === failure.track.url)
+			.map((failure) => failure.track.id)
+	)
+}
+
+/**
+ * Sort a yt-dlp error into why the download failed
+ * - 'unavailable', 'private': the video is gone for everyone
+ * - 'region': blocked where you are, may play elsewhere
+ * - 'transient': bot checks, rate limits, network, disk - worth retrying
+ * @internal - exported for testing only
+ */
+export function classifyFailure(error = '') {
+	if (/try again later/i.test(error)) return 'transient'
+	if (/in your country/i.test(error)) return 'region'
+	if (/Private video/i.test(error)) return 'private'
+	if (
+		/Video unavailable|This video is unavailable|no longer available|has been removed|removed following|blocked due to the claimed content|blocked it on copyright grounds|Incomplete YouTube ID/i.test(
+			error
+		)
+	) {
+		return 'unavailable'
+	}
+	return 'transient'
+}
+
+/**
+ * Pick tracks whose latest download failure means the video is gone for everyone
+ * Expects prepared tracks (fileExists). Skips tracks that have since downloaded,
+ * changed URL, or already have a playback_error
+ * Returns [{track, playback_error}] with playback_error like 'ytdlp:unavailable'
+ * @internal - exported for testing only
+ */
+export function findBrokenTracks(tracks, failures) {
+	// Later lines win, so each track keeps its most recent failure
+	const latest = new Map(failures.map((failure) => [failure.track.id, failure]))
+
+	return tracks.flatMap((track) => {
+		const failure = latest.get(track.id)
+		if (!failure || track.playback_error || track.fileExists) return []
+		if (failure.track.url !== track.url) return []
+
+		const reason = classifyFailure(failure.error)
+		if (reason !== 'unavailable' && reason !== 'private') return []
+		return [{track, playback_error: `ytdlp:${reason}`}]
+	})
 }
 
 /**
@@ -95,13 +152,18 @@ export function filterTracks(
 	tracks,
 	{force = false, failedIds = new Set()} = {}
 ) {
-	const unavailable = tracks.filter((t) => t.mediaNotAvailable)
+	// Marked by --mark-broken: the video is gone. Errors from the web player
+	// (e.g. youtube:150, embedding disabled) can still download, so they don't count
+	const isUnavailable = (t) => t.playback_error?.startsWith('ytdlp:')
+	const unavailable = tracks.filter(isUnavailable)
 	const existing = tracks.filter((t) => t.fileExists)
-	const previouslyFailed = tracks.filter((t) => failedIds.has(t.id))
+	const previouslyFailed = tracks.filter(
+		(t) => failedIds.has(t.id) && !isUnavailable(t)
+	)
 	const toDownload = force
 		? tracks
 		: tracks.filter(
-				(t) => !t.mediaNotAvailable && !t.fileExists && !failedIds.has(t.id)
+				(t) => !isUnavailable(t) && !t.fileExists && !failedIds.has(t.id)
 			)
 
 	return {unavailable, existing, previouslyFailed, toDownload}
@@ -206,7 +268,9 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 	const prepared = prepareTracks(tracks, folderPath)
 
 	// Read previously failed track IDs (unless retrying)
-	const failedIds = retryFailed ? new Set() : readFailedTrackIds(folderPath)
+	const failedIds = retryFailed
+		? new Set()
+		: readFailedTrackIds(folderPath, tracks)
 
 	// Pipeline: Filter
 	const {unavailable, existing, previouslyFailed, toDownload} = filterTracks(
