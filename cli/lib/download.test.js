@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
-import {mkdir, readFile, rm, writeFile} from 'node:fs/promises'
+import {chmod, mkdir, readFile, rm, writeFile} from 'node:fs/promises'
 import {afterEach, beforeEach, test} from 'node:test'
 import {
 	classifyFailure,
 	filterTracks,
 	findBrokenTracks,
 	readFailedTrackIds,
+	toFilename,
+	upgradeTracks,
 	writeBackupJson,
 	writeFailures
 } from './download.js'
@@ -368,4 +370,71 @@ test('filterTracks skips tracks marked broken by --mark-broken, not other playba
 		result.toDownload.map((t) => t.id),
 		['embed-off', 'fine']
 	)
+})
+
+test('upgradeTracks replaces only ~128kbps files that have a 256kbps version', async () => {
+	// Fake yt-dlp/ffprobe/ffmpeg. A file's content is its bitrate
+	const bin = `${testDir}/bin`
+	await mkdir(bin)
+	const fakes = {
+		'yt-dlp': `#!/bin/bash
+for a in "$@"; do case $a in --paths=*) dir=\${a#--paths=};; --output=*) out=\${a#--output=};; https*) url=$a;; esac; done
+case $url in
+	*good) echo 256000 > "$dir/\${out%.%(ext)s}.m4a";;
+	*token) echo "WARNING: formats require a GVS PO Token" >&2; exit 1;;
+	*) echo "ERROR: Requested format is not available" >&2; exit 1;;
+esac`,
+		ffprobe: '#!/bin/bash\nfor f; do :; done; cat "$f"',
+		ffmpeg: '#!/bin/bash\nfor f; do :; done; cp "$3" "$f"'
+	}
+	for (const [name, script] of Object.entries(fakes)) {
+		await writeFile(`${bin}/${name}`, script)
+		await chmod(`${bin}/${name}`, 0o755)
+	}
+	const PATH = process.env.PATH
+	process.env.PATH = `${bin}:${PATH}`
+
+	await mkdir(`${testDir}/tracks`)
+	const track = async (media_id, content) => {
+		const t = {provider: 'youtube', media_id, title: media_id, url: 'x'}
+		t.filepath = `${testDir}/tracks/${toFilename(t)}.m4a`
+		await writeFile(t.filepath, content)
+		return t
+	}
+	const tracks = [
+		await track('a-good', '128000'),
+		await track('b-none', '128000'),
+		await track('c-good', '256000'),
+		await track('d-good', 'corrupt')
+	]
+
+	try {
+		const result = await upgradeTracks(tracks, testDir, {
+			cookiesFromBrowser: 'x'
+		})
+		assert.equal(result.checked, 4)
+		assert.equal(result.upgraded, 1)
+		assert.equal(result.noBetter, 1)
+		assert.equal(result.best, 1)
+		assert.equal(result.unknown, 1)
+		const read = (t) => readFile(t.filepath, 'utf8')
+		assert.equal((await read(tracks[0])).trim(), '256000')
+		assert.equal(await read(tracks[1]), '128000')
+		assert.equal(await read(tracks[3]), 'corrupt')
+
+		// A missing PO token stops the pass and leaves files alone
+		const noToken = [
+			await track('e-token', '128000'),
+			await track('f-token', '128000')
+		]
+		const stopped = await upgradeTracks(noToken, testDir, {
+			cookiesFromBrowser: 'x',
+			concurrency: 1
+		})
+		assert.equal(stopped.missingPoToken, true)
+		assert.equal(stopped.failed, 0)
+		assert.equal(await read(noToken[1]), '128000')
+	} finally {
+		process.env.PATH = PATH
+	}
 })

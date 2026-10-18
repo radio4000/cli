@@ -38,6 +38,17 @@ Most commands support a  `--format` flag to print human-readable text, json or S
 
 After downloading, a `download.json` is written alongside the tracks — a self-contained `ChannelBackup` (`{ version, created_at, channel, tracks[] }`) where each track's `url` points to its local file at `tracks/<filename>.<ext>`. Tracks that failed to download keep their original remote URL. Use `--base-url` to produce absolute URLs (e.g. when serving the folder over HTTP). Use `--no-metadata` to skip writing `download.json`.
 
+### YouTube Premium (256kbps)
+
+By default YouTube serves ~128kbps audio. With a Premium account, some videos also have 256kbps AAC. To get it, pass your browser's cookies and install the [bgutil PO token plugin](https://github.com/Brainicism/bgutil-ytdlp-pot-provider) for yt-dlp. Without the plugin, downloads fall back to ~128kbps with a warning.
+
+```bash
+r4 download ko002 --cookies-from-browser chrome            # new tracks in 256kbps where available
+r4 download ko002 --cookies-from-browser chrome --upgrade  # also replace existing ~128kbps tracks
+```
+
+`--upgrade` reads bitrates with `ffprobe` (part of ffmpeg) and only replaces a file once the better version has downloaded, so if a video is gone or has nothing better, your file stays. Add `--dry-run` to see how many it would try.
+
 ## Development
 
 ```bash

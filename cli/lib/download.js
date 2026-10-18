@@ -1,6 +1,14 @@
-import {spawn} from 'node:child_process'
+import {execFile, spawn} from 'node:child_process'
 import {existsSync, readFileSync} from 'node:fs'
-import {appendFile, mkdir, utimes, writeFile} from 'node:fs/promises'
+import {
+	appendFile,
+	mkdir,
+	rename,
+	rm,
+	utimes,
+	writeFile
+} from 'node:fs/promises'
+import {promisify} from 'node:util'
 import ffmetadata from 'ffmetadata'
 import getArtistTitle from 'get-artist-title'
 import {toExtension, toFilename} from './filenames.js'
@@ -178,7 +186,8 @@ async function downloadBatch(tracks, folderPath, options = {}) {
 		dryRun = false,
 		verbose = false,
 		writeMetadata = true,
-		concurrency = 3
+		concurrency = 3,
+		cookiesFromBrowser
 	} = options
 	const successes = []
 	const failures = []
@@ -212,7 +221,10 @@ async function downloadBatch(tracks, folderPath, options = {}) {
 			const progress = `[${index + 1}/${tracks.length}]`
 
 			try {
-				await downloadTrack(track, folderPath, {verbose})
+				await downloadTrack(track, `${folderPath}/tracks`, {
+					verbose,
+					cookiesFromBrowser
+				})
 
 				if (writeMetadata) {
 					await writeTrackMetadata(track, {verbose})
@@ -299,11 +311,22 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 		dryRun,
 		verbose,
 		writeMetadata: options.writeMetadata !== false, // default true
-		concurrency
+		concurrency,
+		cookiesFromBrowser: options.cookiesFromBrowser
 	})
+
+	const upgrade = options.upgrade
+		? await upgradeTracks(existing, folderPath, {
+				dryRun,
+				verbose,
+				concurrency,
+				cookiesFromBrowser: options.cookiesFromBrowser
+			})
+		: null
 
 	// Pipeline: Report
 	return {
+		upgrade,
 		total: tracks.length,
 		unavailable: unavailable.length,
 		existing: existing.length,
@@ -319,29 +342,165 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 // Core Download Functions
 // ============================================================================
 
+// Below this a YouTube m4a is the free ~128kbps format, worth trying to upgrade
+const UPGRADE_BELOW_BITRATE = 200_000
+
+/**
+ * Replace existing ~128kbps YouTube files with format 141 (256kbps AAC) where
+ * YouTube has it. Downloads to a temp folder first, so the original stays if
+ * anything goes wrong.
+ * @internal - exported for testing only
+ */
+export async function upgradeTracks(tracks, folderPath, options = {}) {
+	const {dryRun, verbose, concurrency = 3, cookiesFromBrowser} = options
+	const tmpDir = `${folderPath}/.upgrade`
+	const limit = pLimit(Math.max(1, Math.min(10, concurrency)))
+	const result = {
+		checked: 0,
+		upgraded: 0,
+		best: 0,
+		unknown: 0,
+		noBetter: 0,
+		failed: 0,
+		missingPoToken: false
+	}
+
+	// Local bitrate check first, so we only ask YouTube about ~128kbps files
+	const candidates = []
+	const youtubeTracks = tracks.filter(
+		(t) => t.provider === 'youtube' && t.filepath.endsWith('.m4a')
+	)
+	console.log()
+	console.log(`Checking bitrate of ${youtubeTracks.length} existing tracks…`)
+	await Promise.all(
+		youtubeTracks.map((track) =>
+			limit(async () => {
+				result.checked++
+				const bitrate = await probeBitrate(track.filepath)
+				if (!bitrate) result.unknown++
+				else if (bitrate >= UPGRADE_BELOW_BITRATE) result.best++
+				else candidates.push(track)
+			})
+		)
+	)
+
+	console.log(
+		`${dryRun ? 'Would try to upgrade' : 'Upgrading'} ${candidates.length} of ${result.checked} existing tracks`
+	)
+	if (dryRun || !candidates.length) return result
+
+	await mkdir(tmpDir, {recursive: true})
+
+	await Promise.all(
+		candidates.map((track, index) =>
+			limit(async () => {
+				if (result.missingPoToken) return
+				const progress = `[${index + 1}/${candidates.length}]`
+				const tmpFile = `${tmpDir}/${toFilename(track)}.m4a`
+				try {
+					await downloadTrack(track, tmpDir, {
+						verbose,
+						cookiesFromBrowser,
+						format: '141'
+					})
+					await writeTrackMetadata({...track, filepath: tmpFile}, {verbose})
+					await setFileTimestamps(tmpFile, track, {verbose})
+					await rename(tmpFile, track.filepath)
+					result.upgraded++
+					console.log(progress, 'Upgraded:', track.filepath)
+				} catch (error) {
+					await rm(tmpFile, {force: true})
+					// Without a PO token 141 is hidden for every track, no point going on
+					if (/PO Token/.test(error.message)) {
+						result.missingPoToken = true
+					} else if (/Requested format is not available/.test(error.message)) {
+						result.noBetter++
+						console.log(progress, 'No better format:', track.title)
+					} else {
+						result.failed++
+						console.error(progress, 'Upgrade failed:', track.title)
+						verbose && console.error(error.message)
+					}
+				}
+			})
+		)
+	)
+
+	await rm(tmpDir, {recursive: true, force: true})
+	return result
+}
+
+/**
+ * Read the audio bitrate of a file with ffprobe, 0 if unknown
+ */
+async function probeBitrate(filepath) {
+	try {
+		const args = '-v error -select_streams a:0 -show_entries stream=bit_rate'
+		const {stdout} = await promisify(execFile)('ffprobe', [
+			...args.split(' '),
+			...['-of', 'csv=p=0', filepath]
+		])
+		return Number(stdout.trim()) || 0
+	} catch {
+		return 0
+	}
+}
+
 /**
  * Download a single track using yt-dlp
  * Spawns yt-dlp process and handles output/errors
  */
-async function downloadTrack(track, folderPath, {verbose = false} = {}) {
+async function downloadTrack(
+	track,
+	tracksDir,
+	{verbose = false, cookiesFromBrowser, format} = {}
+) {
 	const filename = toFilename(track)
 	const extension = toExtension(track)
 
 	const args = [
 		'--extract-audio',
-		`--format=bestaudio[ext=${extension}]/best[ext=mp4]/best`,
+		// 141 is 256kbps AAC, only served to YouTube Premium accounts
+		`--format=${format || `141/bestaudio[ext=${extension}]/best[ext=mp4]/best`}`,
 		'--embed-metadata',
 		'--no-playlist',
-		`--paths=${folderPath}/tracks`,
-		`--output=${filename}.%(ext)s`,
-		track.url
+		`--paths=${tracksDir}`,
+		`--output=${filename}.%(ext)s`
 	]
+
+	if (cookiesFromBrowser) {
+		args.push(`--cookies-from-browser=${cookiesFromBrowser}`)
+	}
+
+	// yt-dlp only uses the web_music client (where 141 lives) for music.youtube.com URLs
+	if (cookiesFromBrowser && track.provider === 'youtube' && track.media_id) {
+		args.push(`https://music.youtube.com/watch?v=${track.media_id}`)
+	} else {
+		args.push(track.url)
+	}
 
 	if (!verbose) {
 		args.push('--quiet')
 	}
 
 	return spawnYtDlp(args, {verbose})
+}
+
+let warnedPoToken = false
+
+/**
+ * Premium formats need a PO token, which yt-dlp can't make on its own.
+ * Warn once per run instead of silently falling back to ~128kbps.
+ */
+function warnPoToken(stderr) {
+	if (warnedPoToken || !/PO Token/.test(stderr)) return
+	warnedPoToken = true
+	console.warn(
+		'⚠ yt-dlp needs a PO token for YouTube Premium formats, falling back to lower quality.'
+	)
+	console.warn(
+		'  Install the bgutil plugin: https://github.com/Brainicism/bgutil-ytdlp-pot-provider'
+	)
 }
 
 /**
@@ -364,6 +523,7 @@ function spawnYtDlp(args, {verbose = false} = {}) {
 		})
 
 		process.on('close', (code) => {
+			warnPoToken(errors.join(''))
 			if (code === 0) {
 				resolve()
 			} else {
