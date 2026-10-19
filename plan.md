@@ -14,7 +14,6 @@ Ideas and tasks for later.
 
 double-check these before tackling them. 
 
-- Fix formatOption.parse validation in common-options.js (not being called by utils.parse)
 - Improve error handling in config.js (differentiate file-not-found from corruption)
 - Extract console.error side effects from data.js (return structured errors instead)
 - Refactor listTracks() in data.js (too complex, split into smaller functions)
@@ -33,7 +32,7 @@ At the moment every single command that reads R4 data does so from the Supabase 
 - File-based cache in ~/.cache/radio4000/
 - Cache keys: `{resource}:{identifier}` (tracks:channelSlug:mychannel)
 - Default TTL: 5 minutes
-- Add --no-cache flag to common-options.js
+- Add --no-cache flag
 - Add r4 cache clear/stats commands
 - Wrap listChannels()/listTracks()
 
