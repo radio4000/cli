@@ -12,6 +12,7 @@ Here's a quick overview:
 
 ```bash
 r4 channel list --limit 10
+r4 channel list --sort created --limit 5           # Newest channels
 r4 channel view ko002
 r4 track list --channel ko002
 r4 track list --channel ko002 --tag jazz,ambient

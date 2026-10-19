@@ -37,10 +37,25 @@ export async function requireAuth() {
 
 // ===== CHANNEL OPERATIONS =====
 
+// Same sorts as the web app. Sorted server-side so it reaches past the 1000-row cap.
+export const channelSorts = {
+	updated: {column: 'latest_track_at', ascending: false},
+	created: {column: 'created_at', ascending: false},
+	tracks: {column: 'track_count', ascending: false},
+	name: {column: 'name', ascending: true}
+}
+
 export async function listChannels(options = {}) {
-	const {data, error} = await sdk.channels.readChannels()
+	const sort = channelSorts[options.sort ?? 'updated']
+	const ascending = options.reverse ? !sort.ascending : sort.ascending
+	let query = sdk.supabase
+		.from('channels_with_tracks')
+		.select('*')
+		.order(sort.column, {ascending, nullsFirst: false})
+	if (options.limit) query = query.limit(options.limit)
+	const {data, error} = await query
 	if (error) throw error
-	return takeMaybe(options.limit)(data.map((ch) => channelSchema.parse(ch)))
+	return data.map((ch) => channelSchema.parse(ch))
 }
 
 export async function getChannel(slug) {
