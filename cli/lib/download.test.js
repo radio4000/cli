@@ -6,6 +6,7 @@ import {
 	filterTracks,
 	findBrokenTracks,
 	readFailedTrackIds,
+	readRecentNoBetter,
 	toFilename,
 	upgradeTracks,
 	writeBackupJson,
@@ -382,6 +383,7 @@ for a in "$@"; do case $a in --paths=*) dir=\${a#--paths=};; --output=*) out=\${
 case $url in
 	*good) echo 256000 > "$dir/\${out%.%(ext)s}.m4a";;
 	*token) echo "WARNING: formats require a GVS PO Token" >&2; exit 1;;
+	*limit) echo "ERROR: [youtube] abc: This content isn't available, try again later. Your account has been rate-limited by YouTube for up to an hour." >&2; exit 1;;
 	*) echo "ERROR: Requested format is not available" >&2; exit 1;;
 esac`,
 		ffprobe: '#!/bin/bash\nfor f; do :; done; cat "$f"',
@@ -422,6 +424,20 @@ esac`,
 		assert.equal(await read(tracks[1]), '128000')
 		assert.equal(await read(tracks[3]), 'corrupt')
 
+		// "No better" is remembered, so a rerun skips it unless --recheck
+		const again = await upgradeTracks([tracks[1]], testDir, {
+			cookiesFromBrowser: 'x'
+		})
+		assert.equal(again.checkedRecently, 1)
+		assert.equal(again.noBetter, 0)
+		const forced = await upgradeTracks([tracks[1]], testDir, {
+			cookiesFromBrowser: 'x',
+			recheck: true
+		})
+		assert.equal(forced.noBetter, 1)
+		const later = Date.now() + 181 * 24 * 60 * 60 * 1000
+		assert.equal(readRecentNoBetter(testDir, later).size, 0)
+
 		// A missing PO token stops the pass and leaves files alone
 		const noToken = [
 			await track('e-token', '128000'),
@@ -431,9 +447,18 @@ esac`,
 			cookiesFromBrowser: 'x',
 			concurrency: 1
 		})
-		assert.equal(stopped.missingPoToken, true)
+		assert.match(stopped.stopped, /PO token/)
 		assert.equal(stopped.failed, 0)
 		assert.equal(await read(noToken[1]), '128000')
+
+		// So does a rate limit
+		const limited = await upgradeTracks(
+			[await track('g-limit', '128000'), await track('h-limit', '128000')],
+			testDir,
+			{cookiesFromBrowser: 'x', concurrency: 1}
+		)
+		assert.match(limited.stopped, /rate-limited/)
+		assert.equal(limited.failed, 0)
 	} finally {
 		process.env.PATH = PATH
 	}
