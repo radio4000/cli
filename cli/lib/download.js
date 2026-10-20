@@ -320,7 +320,8 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 				dryRun,
 				verbose,
 				concurrency,
-				cookiesFromBrowser: options.cookiesFromBrowser
+				cookiesFromBrowser: options.cookiesFromBrowser,
+				recheck: options.recheck
 			})
 		: null
 
@@ -344,6 +345,27 @@ export async function downloadChannel(tracks, folderPath, options = {}) {
 
 // Below this a YouTube m4a is the free ~128kbps format, worth trying to upgrade
 const UPGRADE_BELOW_BITRATE = 200_000
+// YouTube rarely adds 256kbps later, so "no better format" holds for a while
+const RECHECK_AFTER_DAYS = 180
+
+/**
+ * Media IDs that had no better format in the last RECHECK_AFTER_DAYS,
+ * from upgrades.jsonl
+ * @internal - exported for testing only
+ */
+export function readRecentNoBetter(folderPath, now = Date.now()) {
+	const filepath = `${folderPath}/upgrades.jsonl`
+	if (!existsSync(filepath)) return new Set()
+	const cutoff = now - RECHECK_AFTER_DAYS * 24 * 60 * 60 * 1000
+	const ids = new Set()
+	for (const line of readFileSync(filepath, 'utf-8').split('\n')) {
+		try {
+			const entry = JSON.parse(line)
+			if (Date.parse(entry.checked_at) > cutoff) ids.add(entry.media_id)
+		} catch {}
+	}
+	return ids
+}
 
 /**
  * Replace existing ~128kbps YouTube files with format 141 (256kbps AAC) where
@@ -352,7 +374,13 @@ const UPGRADE_BELOW_BITRATE = 200_000
  * @internal - exported for testing only
  */
 export async function upgradeTracks(tracks, folderPath, options = {}) {
-	const {dryRun, verbose, concurrency = 3, cookiesFromBrowser} = options
+	const {
+		dryRun,
+		verbose,
+		concurrency = 3,
+		cookiesFromBrowser,
+		recheck
+	} = options
 	const tmpDir = `${folderPath}/.upgrade`
 	const limit = pLimit(Math.max(1, Math.min(10, concurrency)))
 	const result = {
@@ -361,15 +389,20 @@ export async function upgradeTracks(tracks, folderPath, options = {}) {
 		best: 0,
 		unknown: 0,
 		noBetter: 0,
+		checkedRecently: 0,
 		failed: 0,
-		missingPoToken: false
+		stopped: null
 	}
 
 	// Local bitrate check first, so we only ask YouTube about ~128kbps files
 	const candidates = []
-	const youtubeTracks = tracks.filter(
-		(t) => t.provider === 'youtube' && t.filepath.endsWith('.m4a')
-	)
+	const recentNoBetter = recheck ? new Set() : readRecentNoBetter(folderPath)
+	const youtubeTracks = tracks.filter((t) => {
+		if (t.provider !== 'youtube' || !t.filepath.endsWith('.m4a')) return false
+		if (!recentNoBetter.has(t.media_id)) return true
+		result.checkedRecently++
+		return false
+	})
 	console.log()
 	console.log(`Checking bitrate of ${youtubeTracks.length} existing tracks…`)
 	await Promise.all(
@@ -394,7 +427,7 @@ export async function upgradeTracks(tracks, folderPath, options = {}) {
 	await Promise.all(
 		candidates.map((track, index) =>
 			limit(async () => {
-				if (result.missingPoToken) return
+				if (result.stopped) return
 				const progress = `[${index + 1}/${candidates.length}]`
 				const tmpFile = `${tmpDir}/${toFilename(track)}.m4a`
 				try {
@@ -410,15 +443,26 @@ export async function upgradeTracks(tracks, folderPath, options = {}) {
 					console.log(progress, 'Upgraded:', track.filepath)
 				} catch (error) {
 					await rm(tmpFile, {force: true})
-					// Without a PO token 141 is hidden for every track, no point going on
+					// These hit every remaining track, so stop instead of failing them all
 					if (/PO Token/.test(error.message)) {
-						result.missingPoToken = true
+						result.stopped = 'no PO token, see warning above'
+					} else if (/rate-limited/.test(error.message)) {
+						result.stopped = 'rate-limited by YouTube, try again in an hour'
 					} else if (/Requested format is not available/.test(error.message)) {
 						result.noBetter++
 						console.log(progress, 'No better format:', track.title)
+						await appendFile(
+							`${folderPath}/upgrades.jsonl`,
+							`${JSON.stringify({media_id: track.media_id, checked_at: new Date().toISOString(), result: 'no-better'})}\n`
+						)
 					} else {
 						result.failed++
-						console.error(progress, 'Upgrade failed:', track.title)
+						console.error(
+							progress,
+							'Upgrade failed:',
+							track.title,
+							`(${ytDlpError(error.message)})`
+						)
 						verbose && console.error(error.message)
 					}
 				}
@@ -428,6 +472,16 @@ export async function upgradeTracks(tracks, folderPath, options = {}) {
 
 	await rm(tmpDir, {recursive: true, force: true})
 	return result
+}
+
+/**
+ * The reason from yt-dlp's last ERROR line, without the "[youtube] id:" prefix
+ */
+function ytDlpError(stderr) {
+	const line = stderr.split('\n').findLast((l) => l.startsWith('ERROR:'))
+	return (
+		line?.replace(/^ERROR: (\[[^\]]+\] )?([\w-]{11}: )?/, '') || stderr.trim()
+	)
 }
 
 /**

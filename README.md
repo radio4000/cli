@@ -48,7 +48,7 @@ r4 download ko002 --cookies-from-browser chrome            # new tracks in 256kb
 r4 download ko002 --cookies-from-browser chrome --upgrade  # also replace existing ~128kbps tracks
 ```
 
-`--upgrade` reads bitrates with `ffprobe` (part of ffmpeg) and only replaces a file once the better version has downloaded, so if a video is gone or has nothing better, your file stays. Add `--dry-run` to see how many it would try.
+`--upgrade` reads bitrates with `ffprobe` (part of ffmpeg) and only replaces a file once the better version has downloaded, so if a video is gone or has nothing better, your file stays. Tracks with no better version are noted in `upgrades.jsonl` and skipped for 6 months; `--recheck` tries them anyway. Add `--dry-run` to see how many it would try.
 
 ## Development
 

@@ -82,6 +82,12 @@ export default {
 			description:
 				'Replace existing ~128kbps tracks with 256kbps where YouTube has it. Needs --cookies-from-browser and Premium'
 		},
+		recheck: {
+			type: 'boolean',
+			default: false,
+			description:
+				'With --upgrade, also retry tracks that had no better format in the last 6 months'
+		},
 		'backup-file': {
 			type: 'boolean',
 			default: false,
@@ -120,8 +126,15 @@ export default {
 
 		// Check ownership before a long download, not after
 		if (markBroken && !dryRun) {
-			await requireAuth()
+			const loginFirst = new Error(
+				'To mark broken tracks on your radio, run `r4 auth login` first'
+			)
+			await requireAuth().catch(() => {
+				throw loginFirst
+			})
 			const {data: owned, error} = await sdk.channels.readUserChannels()
+			// An expired session comes back as "User not found"
+			if (error?.message === 'User not found') throw loginFirst
 			if (error) throw error
 			if (!owned.some((ch) => ch.id === channel.id)) {
 				throw new Error(
@@ -177,7 +190,8 @@ export default {
 			writeMetadata: !noMetadata,
 			concurrency: values.concurrency,
 			cookiesFromBrowser: values['cookies-from-browser'],
-			upgrade: values.upgrade
+			upgrade: values.upgrade,
+			recheck: values.recheck
 		})
 
 		// Write backup.json with local paths (unless dry run or no-metadata)
@@ -201,17 +215,20 @@ export default {
 			}
 			console.log(`  Failed: ${result.failed}`)
 			const u = result.upgrade
-			if (u?.checked) {
+			if (u?.checked || u?.checkedRecently) {
 				console.log(`  Upgrade checked: ${u.checked}`)
 				console.log(`    Upgraded: ${u.upgraded}`)
 				console.log(`    Already 256kbps: ${u.best}`)
 				console.log(`    No better format: ${u.noBetter}`)
+				if (u.checkedRecently) {
+					console.log(
+						`    No better format, checked recently (skipped): ${u.checkedRecently}`
+					)
+				}
 				if (u.unknown)
 					console.log(`    Unknown bitrate (skipped): ${u.unknown}`)
 				if (u.failed) console.log(`    Upgrade failed: ${u.failed}`)
-				if (u.missingPoToken) {
-					console.log('    Stopped: no PO token, see warning above')
-				}
+				if (u.stopped) console.log(`    Stopped: ${u.stopped}`)
 			}
 
 			if (result.failures.length > 0) {
