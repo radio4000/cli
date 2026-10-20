@@ -1,6 +1,6 @@
 {
 	"name": "r4",
-	"version": "2.3.0",
+	"version": "2.3.1",
 	"description": "CLI for Radio4000",
 	"type": "module",
 	"main": "cli/main.js",
