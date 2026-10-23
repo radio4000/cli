@@ -10,13 +10,53 @@ import {
 	downloadChannel,
 	findBrokenTracks,
 	prepareTracks,
+	probeFailures,
 	readFailures,
+	tracksToProbe,
 	writeBackupJson,
 	writeChannelAbout,
 	writeChannelImageUrl,
 	writeTracksPlaylist
 } from '../lib/download.js'
 import {parse} from '../utils.js'
+
+/**
+ * Find tracks whose video is gone, with yt-dlp when a dry run gave us nothing
+ * to learn from, then mark them broken or report what would be marked
+ */
+async function reportBroken(
+	tracks,
+	folderPath,
+	{slug, verbose, dryRun, concurrency}
+) {
+	const prepared = prepareTracks(tracks, folderPath)
+	const failures = readFailures(folderPath)
+	const toProbe = dryRun ? tracksToProbe(prepared, failures) : []
+
+	if (toProbe.length > 0) {
+		console.log(`Checking ${toProbe.length} tracks with yt-dlp`)
+		failures.push(...(await probeFailures(toProbe, {concurrency, verbose})))
+	}
+
+	const broken = findBrokenTracks(prepared, failures)
+	console.log()
+	if (dryRun) {
+		console.log(`Would mark broken: ${broken.length}`)
+	} else {
+		await setPlaybackErrors(
+			broken.map(({track, playback_error}) => ({id: track.id, playback_error}))
+		)
+		console.log(`Marked broken: ${broken.length}`)
+		if (broken.length > 0) {
+			console.log(`  Fix them: https://radio4000.com/${slug}/doctor`)
+		}
+	}
+	if (verbose) {
+		for (const {track, playback_error} of broken) {
+			console.log(`  ${playback_error}  ${track.title}`)
+		}
+	}
+}
 
 export default {
 	description: 'Download all tracks from a channel',
@@ -44,7 +84,7 @@ export default {
 			type: 'boolean',
 			default: false,
 			description:
-				'Mark tracks whose video is gone (deleted, private, taken down) as broken, so they show up in doctor. Your own channels only'
+				'Mark tracks whose video is gone (deleted, private, taken down) as broken, so they show up in doctor. Your own channels only. With --dry-run it checks with yt-dlp instead, no downloads'
 		},
 		'dry-run': {
 			type: 'boolean',
@@ -110,6 +150,9 @@ export default {
 		const noMetadata = values['no-metadata']
 		const backupFile = values['backup-file']
 		const markBroken = values['mark-broken']
+		// A dry run downloads nothing, so it can combine with --mark-broken to
+		// check tracks with yt-dlp and report, without writing or downloading
+		const checkOnly = markBroken && dryRun
 
 		if (values.upgrade && !dryRun && !values['cookies-from-browser']) {
 			throw new Error(
@@ -144,7 +187,7 @@ export default {
 		}
 
 		console.log(`${channel.name} (@${channel.slug})`)
-		if (dryRun) {
+		if (dryRun && !checkOnly) {
 			console.log(folderPath)
 		}
 		console.log()
@@ -158,6 +201,16 @@ export default {
 			})
 			console.log(`${folderPath}/`)
 			console.log('└── download.json')
+			return ''
+		}
+
+		if (checkOnly) {
+			await reportBroken(tracks, folderPath, {
+				slug,
+				verbose,
+				dryRun,
+				concurrency: values.concurrency
+			})
 			return ''
 		}
 
@@ -240,30 +293,12 @@ export default {
 
 		// Reads the whole failures file, so earlier runs count too
 		if (markBroken) {
-			const broken = findBrokenTracks(
-				prepareTracks(tracks, folderPath),
-				readFailures(folderPath)
-			)
-			console.log()
-			if (dryRun) {
-				console.log(`Would mark broken: ${broken.length}`)
-			} else {
-				await setPlaybackErrors(
-					broken.map(({track, playback_error}) => ({
-						id: track.id,
-						playback_error
-					}))
-				)
-				console.log(`Marked broken: ${broken.length}`)
-				if (broken.length > 0) {
-					console.log(`  Fix them: https://radio4000.com/${slug}/doctor`)
-				}
-			}
-			if (verbose) {
-				for (const {track, playback_error} of broken) {
-					console.log(`  ${playback_error}  ${track.title}`)
-				}
-			}
+			await reportBroken(tracks, folderPath, {
+				slug,
+				verbose,
+				dryRun,
+				concurrency: values.concurrency
+			})
 		}
 
 		// Don't return data - all output already printed above

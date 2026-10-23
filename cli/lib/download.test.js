@@ -8,6 +8,7 @@ import {
 	readFailedTrackIds,
 	readRecentNoBetter,
 	toFilename,
+	tracksToProbe,
 	upgradeTracks,
 	writeBackupJson,
 	writeFailures
@@ -462,4 +463,29 @@ esac`,
 	} finally {
 		process.env.PATH = PATH
 	}
-})
+}) +
+	test('tracksToProbe skips local files, marked tracks and recorded failures', () => {
+		const url = (id) => `https://www.youtube.com/watch?v=${id}`
+		const tracks = [
+			{id: 'missing', url: url('a')},
+			{id: 'downloaded', url: url('b'), fileExists: true},
+			{id: 'flagged', url: url('c'), playback_error: 'youtube:150'},
+			{id: 'already-failed', url: url('d')},
+			{id: 'replaced', url: url('new')}
+		]
+		const failures = [
+			{
+				track: {id: 'already-failed', url: url('d')},
+				error: 'ERROR: Video unavailable'
+			},
+			{
+				track: {id: 'replaced', url: url('old')},
+				error: 'ERROR: Video unavailable'
+			}
+		]
+
+		assert.deepEqual(
+			tracksToProbe(tracks, failures).map((t) => t.id),
+			['missing', 'replaced']
+		)
+	})

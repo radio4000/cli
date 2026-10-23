@@ -37,6 +37,8 @@ const formatTrackText = (tr) => trackToText(tr)
  * - readFailedTrackIds() - Read previously failed track IDs
  * - classifyFailure() - Sort a yt-dlp error into why it failed
  * - findBrokenTracks() - Pick tracks whose download failed for good
+ * - tracksToProbe() - Pick tracks a --mark-broken dry run should check
+ * - probeTrack() - Ask yt-dlp if a video plays, without downloading it
  * - filterTracks() - Categorize tracks for download pipeline
  * - writeFailures() - Append failures to JSONL file
  */
@@ -117,6 +119,67 @@ export function classifyFailure(error = '') {
 }
 
 /**
+ * Index failures by track id, later lines win so each track keeps its newest
+ */
+function latestFailures(failures) {
+	return new Map(failures.map((failure) => [failure.track.id, failure]))
+}
+
+/**
+ * Pick tracks a --mark-broken dry run should ask yt-dlp about
+ * A local file is proof enough, and a recorded failure already says what happened
+ * @internal - exported for testing only
+ */
+export function tracksToProbe(tracks, failures) {
+	const latest = latestFailures(failures)
+
+	return tracks.filter((track) => {
+		if (track.fileExists || track.playback_error) return false
+		if (latest.get(track.id)?.track.url === track.url) return false
+		return true
+	})
+}
+
+/**
+ * Ask yt-dlp whether a video still plays, without fetching any audio
+ * Resolves with the error text, or null when the video is fine
+ * @internal - exported for testing only
+ */
+export async function probeTrack(track, {verbose = false} = {}) {
+	const args = [
+		'--simulate',
+		'--no-playlist',
+		'--quiet',
+		'--no-warnings',
+		track.url
+	]
+
+	try {
+		await spawnYtDlp(args, {verbose})
+		return null
+	} catch (error) {
+		// A missing yt-dlp or a network blip classifies as transient, so it marks nothing
+		return error.message
+	}
+}
+
+/**
+ * Probe tracks with yt-dlp and return failures in failures.jsonl shape
+ * @internal - exported for testing only
+ */
+export async function probeFailures(
+	tracks,
+	{concurrency = 3, verbose = false} = {}
+) {
+	const limit = pLimit(Math.max(1, Math.min(10, concurrency)))
+	const results = await limit.map(tracks, async (track) => {
+		const error = await probeTrack(track, {verbose})
+		return error ? {track: {id: track.id, url: track.url}, error} : null
+	})
+	return results.filter(Boolean)
+}
+
+/**
  * Pick tracks whose latest download failure means the video is gone for everyone
  * Expects prepared tracks (fileExists). Skips tracks that have since downloaded,
  * changed URL, or already have a playback_error
@@ -124,8 +187,7 @@ export function classifyFailure(error = '') {
  * @internal - exported for testing only
  */
 export function findBrokenTracks(tracks, failures) {
-	// Later lines win, so each track keeps its most recent failure
-	const latest = new Map(failures.map((failure) => [failure.track.id, failure]))
+	const latest = latestFailures(failures)
 
 	return tracks.flatMap((track) => {
 		const failure = latest.get(track.id)
