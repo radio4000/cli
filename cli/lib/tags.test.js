@@ -11,11 +11,19 @@ test('extractTags: extracts hashtags from text', () => {
 
 test('extractTags: handles various formats', () => {
 	expect(extractTags('#House #techno-minimal #90s')).toEqual([
+		'90s',
 		'house',
-		'techno-minimal',
-		'90s'
+		'techno-minimal'
 	])
 	expect(extractTags('#test_tag')).toEqual(['test_tag'])
+})
+
+test('extractTags: same rule as the database', () => {
+	expect(extractTags('#Techno, (#uk) page#top #weird#minimal')).toEqual([
+		'techno',
+		'uk',
+		'weird'
+	])
 })
 
 test('getUniqueTags: returns empty for empty array', () => {
