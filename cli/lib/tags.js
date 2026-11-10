@@ -2,29 +2,16 @@
  * Tag utilities for extracting and organizing tags from tracks
  * Tags are stored as hashtags in track.description (e.g., "#ambient #drone")
  */
+import {extractTokens} from '@radio4000/sdk'
 
 /**
- * Extract tags from a string (typically track.description or track.body)
- * Tags are identified by # prefix and can contain letters, numbers, and hyphens
+ * Extract tags from a string (typically track.description or track.body), the
+ * same way the database fills track.tags (sdk extractTokens).
  * @param {string} text - Text to extract tags from
- * @returns {string[]} Array of tags without # prefix
+ * @returns {string[]} Lowercase tags without the # prefix
  */
 export function extractTags(text) {
-	if (!text || typeof text !== 'string') {
-		return []
-	}
-
-	// Match hashtags: # followed by alphanumeric, underscore, or hyphen
-	const tagRegex = /#([\w-]+)/g
-	const matches = text.matchAll(tagRegex)
-	const tags = []
-
-	for (const match of matches) {
-		// Extract tag without the # prefix, convert to lowercase
-		tags.push(match[1].toLowerCase())
-	}
-
-	return tags
+	return extractTokens(text).tags
 }
 
 /**

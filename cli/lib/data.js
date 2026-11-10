@@ -184,25 +184,26 @@ export async function deleteTrack(id) {
 
 /** @param {string} query */
 export async function searchChannels(query, options = {}) {
-	const tag = query.startsWith('#') ? query.slice(1) : null
-	// Channels don't have tags, so tag queries search fts with the tag name stripped of #
-	const {data, error} = await sdk.supabase
-		.from('channels')
-		.select()
-		.textSearch('fts', `'${tag || query}':*`)
+	// Channels have no tags; search their text, dropping the # or @
+	const text = query.replace(/(^|\s)[#@]/g, '$1')
+	const {data, error} = await sdk.search.searchChannels(text, {
+		limit: options.limit
+	})
 	if (error) throw new Error(error.message)
-	return takeMaybe(options.limit)(data.map((ch) => channelSchema.parse(ch)))
+	return data.channels.map((ch) => channelSchema.parse(ch))
 }
 
+/**
+ * Same grammar as radio4000.com search: @slug, #tag, mention:@slug, words.
+ * Every part narrows the result. The database does the matching.
+ * @param {string} query
+ */
 export async function searchTracks(query, options = {}) {
-	const tag = query.startsWith('#') ? query.slice(1) : null
-	let request = sdk.supabase.from('channel_tracks').select()
-	request = tag
-		? request.contains('tags', [tag])
-		: request.textSearch('fts', `'${query}':*`)
-	const {data, error} = await request
+	const {data, error} = await sdk.search.searchTracks(query, {
+		limit: options.limit
+	})
 	if (error) throw new Error(error.message)
-	return takeMaybe(options.limit)(data.map((t) => trackSchema.parse(t)))
+	return data.tracks.map((t) => trackSchema.parse(t))
 }
 
 export async function searchAll(query, options = {}) {

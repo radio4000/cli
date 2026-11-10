@@ -101,6 +101,9 @@ export default {
 
 	examples: [
 		'r4 search ambient',
+		'r4 search "#techno #acid" --tracks',
+		'r4 search "@ko002 #house detroit" --tracks',
+		'r4 search "mention:@ko002" --tracks',
 		'r4 search ambient --channels',
 		'r4 search ko002 --channels --limit 5',
 		'r4 search "electronic music" --tracks',
